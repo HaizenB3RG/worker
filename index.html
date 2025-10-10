@@ -566,7 +566,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.1.4 (Payment Display Fix - Closed Status)');
+        console.log('📱 Worker App Version: 4.1.5 (Payment Calculation Fix - Mark as Fully Paid)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2226,7 +2226,7 @@
             }
             data.history.push(manualCalculation);
             saveData(data);
-            
+
             // Auto-save to Firebase
             await window.saveDraftToFirebase(manualCalculation);
 
@@ -2342,6 +2342,7 @@
             paymentInput.value = '';
             paymentInput.max = remaining.toFixed(2);
             paymentInput.placeholder = currentLang === 'ar' ? 'أدخل المبلغ المستلم' : 'Enter amount received';
+            paymentInput.disabled = false; // Re-enable input
             
             // Show/hide "Mark as fully paid" checkbox based on remaining amount
             const markFullyPaidSection = document.getElementById('markFullyPaidSection');
@@ -2354,6 +2355,21 @@
             } else {
                 markFullyPaidSection.style.display = 'none';
             }
+            
+            // Add event listener to checkbox to disable/enable input
+            markFullyPaidCheckbox.onchange = function() {
+                if (this.checked) {
+                    paymentInput.value = '0';
+                    paymentInput.disabled = true;
+                    paymentInput.style.opacity = '0.5';
+                    paymentInput.style.cursor = 'not-allowed';
+                } else {
+                    paymentInput.value = '';
+                    paymentInput.disabled = false;
+                    paymentInput.style.opacity = '1';
+                    paymentInput.style.cursor = 'text';
+                }
+            };
             
             document.getElementById('paymentModal').style.display = 'flex';
         }
@@ -2423,15 +2439,18 @@
             submission.totalPaid = totalPaid + finalAmount;
             
             // Update payment status
-            if (markFullyPaid || submission.totalPaid >= totalAmount - 0.01) { // Mark as fully paid if checkbox is checked OR amount is complete
+            if (markFullyPaid) {
+                // Worker manually marked as fully paid (partial payment closed)
                 submission.paymentStatus = 'fully_paid';
-                submission.totalPaid = totalAmount; // Set to exact total amount
+                // DON'T change totalPaid - keep actual amount paid!
                 
-                // Add note if manually marked as fully paid
-                if (markFullyPaid && (amount < remaining)) {
-                    const waived = totalAmount - (totalPaid + amount);
-                    submission.fullyPaidNote = t('worker_marked_paid') + ' - ' + t('cannot_pay_remaining').replace('{amount}', waived.toFixed(2));
-                }
+                // Add note explaining why payment was closed early
+                const waived = totalAmount - submission.totalPaid;
+                submission.fullyPaidNote = t('worker_marked_paid') + ' - ' + t('cannot_pay_remaining').replace('{amount}', waived.toFixed(2));
+            } else if (submission.totalPaid >= totalAmount - 0.01) {
+                // Payment is actually complete (100%)
+                submission.paymentStatus = 'fully_paid';
+                submission.totalPaid = totalAmount; // Set to exact total amount to avoid rounding errors
             } else if (submission.totalPaid > 0) {
                 submission.paymentStatus = 'partially_paid';
             } else {
