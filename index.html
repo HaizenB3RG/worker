@@ -325,7 +325,7 @@
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 data-i18n="work_history">Work History</h2>
-                    <button class="btn" style="background: #ef4444; color: white; padding: 12px 20px; width: auto; font-size: 14px;" onclick="clearAllHistory()" data-i18n="clear_all">🗑️ Clear All History</button>
+                    <button class="btn" style="background: #f59e0b; color: white; padding: 12px 20px; width: auto; font-size: 14px;" onclick="clearUnsentSessions()" data-i18n="clear_unsent_sessions">🗑️ Clear Unsent Sessions</button>
                 </div>
                 <div id="history-list">
                     <p style="text-align: center; color: #94a3b8; padding: 40px;" data-i18n="no_history">No history yet</p>
@@ -370,7 +370,10 @@
                 </div>
 
                 <div id="submission-history" style="margin-top: 20px;">
-                    <h3 style="margin-bottom: 15px; color: #1e293b;" data-i18n="submission_history">📋 Submission History</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: #1e293b; margin: 0;" data-i18n="submission_history">📋 Submission History</h3>
+                        <button class="btn" style="background: #dc2626; color: white; padding: 10px 16px; width: auto; font-size: 13px; font-weight: 600;" onclick="clearSubmissionHistory()" data-i18n="clear_submission_history">🗑️ Clear Submission History</button>
+                    </div>
                     <div id="submission-list"></div>
                 </div>
             </div>
@@ -566,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.2.0 (Real-Time Multi-Device Sync)');
+        console.log('📱 Worker App Version: 4.2.1 (Separate Clear Buttons)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1292,7 +1295,11 @@
                 confirm_full_payment: "Client can only pay {amount} MAD?",
                 remaining_unpayable: "Remaining {amount} MAD will be marked as unpayable.",
                 worker_marked_paid: "Worker marked as fully paid",
-                cannot_pay_remaining: "Client cannot pay remaining {amount} MAD"
+                cannot_pay_remaining: "Client cannot pay remaining {amount} MAD",
+                clear_unsent_sessions: "Clear Unsent Sessions",
+                clear_submission_history: "Clear Submission History",
+                confirm_clear_unsent: "Delete all unsent work sessions? This cannot be undone!",
+                confirm_clear_submissions: "⚠️ WARNING: Delete ALL submission history?\n\nThis will permanently delete:\n• All submitted sessions\n• All payment records\n• All work history\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?"
             },
             ar: {
                 app_title: "مؤقت عمل الحفارة 🚜",
@@ -1389,7 +1396,11 @@
                 confirm_full_payment: "الزبون يستطيع دفع {amount} درهم فقط؟",
                 remaining_unpayable: "المبلغ المتبقي {amount} درهم سيتم تحديده كغير قابل للدفع.",
                 worker_marked_paid: "تم التحديد كمدفوع بالكامل من قبل العامل",
-                cannot_pay_remaining: "الزبون لا يستطيع دفع المبلغ المتبقي {amount} درهم"
+                cannot_pay_remaining: "الزبون لا يستطيع دفع المبلغ المتبقي {amount} درهم",
+                clear_unsent_sessions: "مسح الجلسات غير المرسلة",
+                clear_submission_history: "مسح سجل الإرساليات",
+                confirm_clear_unsent: "حذف جميع جلسات العمل غير المرسلة؟ لا يمكن التراجع عن هذا الإجراء!",
+                confirm_clear_submissions: "⚠️ تحذير: حذف كل سجل الإرساليات؟\n\nسيتم حذف نهائيًا:\n• جميع الجلسات المرسلة\n• جميع سجلات الدفع\n• جميع سجلات العمل\n\nلا يمكن التراجع عن هذا الإجراء!\n\nهل أنت متأكد تمامًا؟"
             }
         };
 
@@ -1686,6 +1697,60 @@
             
             renderHistory();
             updateTodaySummary();
+        }
+
+        // Clear only unsent sessions
+        async function clearUnsentSessions() {
+            const data = loadData();
+            const unsentCount = data.history.filter(h => h.sent === false || h.sent === undefined).length;
+            
+            if (unsentCount === 0) {
+                await customAlert('No unsent sessions to clear!', 'ℹ️');
+                return;
+            }
+            
+            const confirmed = await customConfirm(t('confirm_clear_unsent'), '⚠️');
+            if (!confirmed) return;
+            
+            // Delete unsent sessions from Firebase
+            const unsentSessions = data.history.filter(h => h.sent === false || h.sent === undefined);
+            for (const session of unsentSessions) {
+                if (session.timestamp) {
+                    await window.deleteDraftFromFirebase(session.timestamp);
+                }
+            }
+            
+            // Remove unsent sessions from local data
+            data.history = data.history.filter(h => h.sent === true);
+            saveData(data);
+            
+            renderHistory();
+            updateTodaySummary();
+            updateSubmitSummary();
+            
+            await customAlert(`✅ Cleared ${unsentCount} unsent session(s)!`, '✅');
+        }
+
+        // Clear all submission history
+        async function clearSubmissionHistory() {
+            const data = loadData();
+            const submissionCount = data.submissions ? data.submissions.length : 0;
+            
+            if (submissionCount === 0) {
+                await customAlert('No submission history to clear!', 'ℹ️');
+                return;
+            }
+            
+            const confirmed = await customConfirm(t('confirm_clear_submissions'), '⚠️');
+            if (!confirmed) return;
+            
+            // Clear all submissions
+            data.submissions = [];
+            saveData(data);
+            
+            renderSubmissionHistory();
+            
+            await customAlert(`✅ Cleared ${submissionCount} submission(s)!`, '✅');
         }
 
         // ========================================
