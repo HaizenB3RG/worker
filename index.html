@@ -569,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.2.1 (Separate Clear Buttons)');
+        console.log('📱 Worker App Version: 4.2.2 (Fixed Clear Submission History)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1744,7 +1744,38 @@
             const confirmed = await customConfirm(t('confirm_clear_submissions'), '⚠️');
             if (!confirmed) return;
             
-            // Clear all submissions
+            // Delete submissions from Firebase
+            try {
+                console.log('🗑️ Deleting submissions from Firebase...');
+                const workerName = getWorkerName();
+                
+                // Get all submissions for this worker from Firebase
+                const submissionsRef = window.firebaseRef(window.firebaseDB, 'submissions');
+                const snapshot = await window.firebaseGet(submissionsRef);
+                
+                if (snapshot.exists()) {
+                    const allSubmissions = snapshot.val();
+                    let deletedCount = 0;
+                    
+                    // Delete each submission that belongs to this worker
+                    for (const [key, submission] of Object.entries(allSubmissions)) {
+                        if (submission.workerName === workerName) {
+                            const submissionRef = window.firebaseRef(window.firebaseDB, `submissions/${key}`);
+                            await window.firebaseRemove(submissionRef);
+                            deletedCount++;
+                            console.log(`   Deleted submission: ${key}`);
+                        }
+                    }
+                    
+                    console.log(`✅ Deleted ${deletedCount} submission(s) from Firebase`);
+                }
+            } catch (error) {
+                console.error('❌ Error deleting from Firebase:', error);
+                await customAlert('⚠️ Could not delete from cloud. Check internet connection.', '⚠️');
+                return;
+            }
+            
+            // Clear all submissions locally
             data.submissions = [];
             saveData(data);
             
