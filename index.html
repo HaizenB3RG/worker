@@ -566,7 +566,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.1.6 (Improved Mark as Fully Paid Confirmation)');
+        console.log('📱 Worker App Version: 4.1.7 (Clearer Payment Closed Display)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2076,7 +2076,10 @@
                         // Check if this is a "marked as fully paid" case (show actual paid amount)
                         (s.fullyPaidNote ? 
                             '<div style="font-size: 12px; color: #f59e0b; margin-top: 5px;">' +
-                            'Paid: <strong>' + totalPaid.toFixed(2) + ' MAD</strong> / ' + totalAmount.toFixed(2) + ' MAD (' + percentage + '%)</div>' +
+                            '<span style="text-decoration: line-through; color: #94a3b8;">' + totalAmount.toFixed(2) + ' MAD</span><br>' +
+                            '<strong style="font-size: 16px; color: #f59e0b;">' + totalPaid.toFixed(2) + ' MAD</strong> ' +
+                            '<span style="font-size: 11px; color: #64748b;">(actual amount received)</span>' +
+                            '</div>' +
                             '<div style="font-size: 11px; color: #f59e0b; margin-top: 5px; padding: 5px; background: #fef3c7; border-radius: 4px;">ℹ️ ' + s.fullyPaidNote + '</div>'
                             :
                             '<div style="font-size: 12px; color: #22c55e; margin-top: 5px;">✅ ' + t('fully_paid') + ': ' + totalAmount.toFixed(2) + ' MAD</div>'
