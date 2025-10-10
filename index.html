@@ -566,7 +566,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.1.5 (Payment Calculation Fix - Mark as Fully Paid)');
+        console.log('📱 Worker App Version: 4.1.6 (Improved Mark as Fully Paid Confirmation)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2415,10 +2415,14 @@
             
             // If "Mark as fully paid" is checked, confirm with user
             if (markFullyPaid) {
-                const amountText = finalAmount > 0 ? finalAmount.toFixed(2) : '0';
-                const remainingAfter = remaining - finalAmount;
-                const confirmMsg = t('confirm_full_payment').replace('{amount}', amountText) + '\n\n' + 
-                                   t('remaining_unpayable').replace('{amount}', remainingAfter.toFixed(2));
+                let confirmMsg;
+                if (finalAmount > 0) {
+                    // Worker is adding a partial payment AND marking as fully paid
+                    confirmMsg = `Add ${finalAmount.toFixed(2)} MAD and mark as fully paid?\n\nClient cannot pay the remaining ${(remaining - finalAmount).toFixed(2)} MAD.\nThis will close the payment.`;
+                } else {
+                    // Worker is just marking as fully paid with no additional payment
+                    confirmMsg = `Mark this payment as fully paid?\n\nClient cannot pay the remaining ${remaining.toFixed(2)} MAD.\nThis will close the payment.`;
+                }
                 
                 const confirmed = await customConfirm(confirmMsg, '⚠️');
                 if (!confirmed) {
