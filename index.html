@@ -566,7 +566,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.1.8 (Fixed Blue Amount Display)');
+        console.log('📱 Worker App Version: 4.2.0 (Real-Time Multi-Device Sync)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1053,38 +1053,125 @@
             // Check if we need to recover data from Firebase
             recoverDataFromFirebase();
             
-            // Listen for status changes from admin
-            const submissionsRef = ref(database, 'submissions');
-            onValue(submissionsRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const firebaseData = snapshot.val();
-                const data = loadData();
+            // ========================================
+            // 🔥 REAL-TIME LISTENER: DRAFTS (UNSENT SESSIONS)
+            // ========================================
+            const workerName = getWorkerName();
+            const draftsRef = ref(database, `drafts/${workerName}`);
+            
+            console.log('👂 Setting up real-time listener for drafts...');
+            
+            onValue(draftsRef, (snapshot) => {
+                console.log('🔥 Firebase drafts changed!');
                 
-                // Update local submissions with status from Firebase
-                if (data.submissions && data.submissions.length > 0) {
-                    let updated = false;
+                if (snapshot.exists()) {
+                    const firebaseDrafts = snapshot.val();
+                    const draftsArray = Object.values(firebaseDrafts);
+                    console.log(`☁️ Firebase has ${draftsArray.length} drafts`);
                     
-                    data.submissions.forEach(localSub => {
-                        // Find matching submission in Firebase by timestamp
-                        Object.keys(firebaseData).forEach(key => {
-                            const firebaseSub = firebaseData[key];
-                            if (firebaseSub.timestamp === localSub.timestamp) {
-                                if (localSub.status !== firebaseSub.status) {
-                                    localSub.status = firebaseSub.status;
-                                    updated = true;
-                                    console.log('✅ Status updated to:', firebaseSub.status);
-                                }
-                            }
-                        });
+                    const data = loadData();
+                    const localTimestamps = data.history.map(h => h.timestamp);
+                    let added = 0;
+                    let removed = 0;
+                    
+                    // Add new drafts from Firebase that don't exist locally
+                    draftsArray.forEach(draft => {
+                        if (!localTimestamps.includes(draft.timestamp)) {
+                            console.log('➕ Adding new draft from Firebase:', draft.timestamp);
+                            data.history.push(draft);
+                            added++;
+                        }
                     });
                     
-                    if (updated) {
+                    // Remove local drafts that don't exist in Firebase (were submitted on another device)
+                    const firebaseTimestamps = draftsArray.map(d => d.timestamp);
+                    data.history = data.history.filter(h => {
+                        if (h.sent === false && !firebaseTimestamps.includes(h.timestamp)) {
+                            console.log('➖ Removing draft (submitted on another device):', h.timestamp);
+                            removed++;
+                            return false;
+                        }
+                        return true;
+                    });
+                    
+                    if (added > 0 || removed > 0) {
                         saveData(data);
-                        renderSubmissionHistory();
+                        renderHistory();
+                        updateSubmitSummary();
+                        updateTodaySummary();
+                        console.log(`✅ Synced: +${added} added, -${removed} removed`);
+                    }
+                } else {
+                    // No drafts in Firebase - remove all unsent sessions locally
+                    console.log('📭 No drafts in Firebase');
+                    const data = loadData();
+                    const beforeCount = data.history.filter(h => h.sent === false).length;
+                    
+                    if (beforeCount > 0) {
+                        data.history = data.history.filter(h => h.sent !== false);
+                        saveData(data);
+                        renderHistory();
+                        updateSubmitSummary();
+                        updateTodaySummary();
+                        console.log(`✅ Removed ${beforeCount} unsent sessions (submitted on another device)`);
                     }
                 }
-            }
-        });
+            });
+            
+            // ========================================
+            // 🔥 REAL-TIME LISTENER: SUBMISSIONS
+            // ========================================
+            const submissionsRef = ref(database, 'submissions');
+            
+            console.log('👂 Setting up real-time listener for submissions...');
+            
+            onValue(submissionsRef, (snapshot) => {
+                console.log('🔥 Firebase submissions changed!');
+                
+                if (snapshot.exists()) {
+                    const firebaseData = snapshot.val();
+                    const data = loadData();
+                    
+                    // Sync submissions from Firebase
+                    const firebaseSubmissions = Object.values(firebaseData).filter(sub => 
+                        sub.workerName === workerName
+                    );
+                    
+                    console.log(`☁️ Firebase has ${firebaseSubmissions.length} submissions for ${workerName}`);
+                    
+                    // Update local submissions
+                    if (!data.submissions) data.submissions = [];
+                    
+                    const localTimestamps = data.submissions.map(s => s.timestamp);
+                    let addedSubs = 0;
+                    let updatedSubs = 0;
+                    
+                    firebaseSubmissions.forEach(firebaseSub => {
+                        const localIndex = data.submissions.findIndex(s => s.timestamp === firebaseSub.timestamp);
+                        
+                        if (localIndex === -1) {
+                            // New submission from another device
+                            console.log('➕ Adding new submission from Firebase:', firebaseSub.timestamp);
+                            data.submissions.push(firebaseSub);
+                            addedSubs++;
+                        } else {
+                            // Update existing submission (status, payments, etc.)
+                            const localSub = data.submissions[localIndex];
+                            if (JSON.stringify(localSub) !== JSON.stringify(firebaseSub)) {
+                                console.log('🔄 Updating submission from Firebase:', firebaseSub.timestamp);
+                                data.submissions[localIndex] = firebaseSub;
+                                updatedSubs++;
+                            }
+                        }
+                    });
+                    
+                    if (addedSubs > 0 || updatedSubs > 0) {
+                        saveData(data);
+                        renderSubmissionHistory();
+                        console.log(`✅ Submissions synced: +${addedSubs} added, ${updatedSubs} updated`);
+                    }
+                }
+            });
         } // End of initApp()
 
         // Note: initApp() will be called automatically after authentication succeeds
