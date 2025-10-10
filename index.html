@@ -566,7 +566,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.1.7 (Clearer Payment Closed Display)');
+        console.log('📱 Worker App Version: 4.1.8 (Fixed Blue Amount Display)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2048,6 +2048,19 @@
                 const clientName = s.clientName || (s.sessions && s.sessions[0] ? (s.sessions[0].clientName || s.sessions[0].job) : 'Unknown');
                 const jobSites = s.sessions ? [...new Set(s.sessions.map(sess => sess.jobSite || sess.job || 'Unknown'))].join(', ') : 'Unknown';
                 
+                // Format the total payment display based on payment status
+                let totalPaymentDisplay;
+                if (s.fullyPaidNote) {
+                    // Payment closed - show crossed out original + actual amount
+                    totalPaymentDisplay = '<div style="text-align: right;">' +
+                        '<div style="text-decoration: line-through; color: #94a3b8; font-size: 12px;">' + s.totalPayment + ' MAD</div>' +
+                        '<strong style="color: #f59e0b; font-size: 16px;">' + totalPaid.toFixed(2) + ' MAD</strong>' +
+                        '</div>';
+                } else {
+                    // Normal display
+                    totalPaymentDisplay = '<strong style="color: #2563eb;">' + s.totalPayment + ' MAD</strong>';
+                }
+                
                 return '<div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid ' + statusColor + ';">' +
                     '<div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">' + 
                     date.toLocaleDateString() + ' at ' + date.toLocaleTimeString() + '</div>' +
@@ -2057,7 +2070,7 @@
                     
                     '<div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px;">' +
                     '<span>' + s.sessions.length + ' ' + (s.sessions.length === 1 ? t('session') : t('sessions')) + ' · ' + s.totalHours + '</span>' +
-                    '<strong style="color: #2563eb;">' + s.totalPayment + ' MAD</strong></div>' +
+                    totalPaymentDisplay + '</div>' +
                     
                     '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">' +
                     '<span style="font-size: 12px; font-weight: 600; color: ' + statusColor + ';">' + statusText + '</span>' +
