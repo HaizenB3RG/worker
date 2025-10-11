@@ -569,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.3.0 (Full Multi-Device Sync - Delete Sessions)');
+        console.log('📱 Worker App Version: 4.3.1 (Fix: Sync fullyPaidNote to Firebase)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2657,6 +2657,12 @@
                         totalPaid: submission.totalPaid,
                         paymentStatus: submission.paymentStatus
                     };
+                    
+                    // Include fullyPaidNote if it exists
+                    if (submission.fullyPaidNote) {
+                        updateData.fullyPaidNote = submission.fullyPaidNote;
+                    }
+                    
                     console.log('   Update data:', updateData);
                     
                     await window.firebaseUpdate(submissionRef, updateData);
