@@ -569,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.3.1 (Fix: Sync fullyPaidNote to Firebase)');
+        console.log('📱 Worker App Version: 4.3.2 (Fix: Auto-find Firebase keys for payments)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2689,12 +2689,46 @@
             }
         }
 
-        function findFirebaseKeyByTimestamp(timestamp) {
+        async function findFirebaseKeyByTimestamp(timestamp) {
             const data = loadData();
             const submission = data.submissions.find(s => s.timestamp === timestamp);
-            const key = submission ? submission.firebaseKey : null;
-            console.log('🔑 Finding Firebase key for timestamp:', timestamp, '→', key);
-            return key;
+            
+            // If we already have the firebaseKey locally, return it
+            if (submission && submission.firebaseKey) {
+                console.log('🔑 Finding Firebase key for timestamp:', timestamp, '→', submission.firebaseKey, '(from localStorage)');
+                return submission.firebaseKey;
+            }
+            
+            // If not, search Firebase for it
+            console.log('🔍 Firebase key not in localStorage, searching Firebase...');
+            try {
+                const submissionsRef = window.firebaseRef(window.firebaseDB, 'submissions');
+                const snapshot = await window.firebaseGet(submissionsRef);
+                
+                if (snapshot.exists()) {
+                    const allSubmissions = snapshot.val();
+                    for (const [key, sub] of Object.entries(allSubmissions)) {
+                        if (sub.timestamp === timestamp) {
+                            console.log('✅ Found Firebase key:', key);
+                            
+                            // Save it to localStorage for future use
+                            if (submission) {
+                                submission.firebaseKey = key;
+                                saveData(data);
+                                console.log('💾 Saved Firebase key to localStorage');
+                            }
+                            
+                            return key;
+                        }
+                    }
+                }
+                
+                console.log('❌ No matching submission found in Firebase');
+                return null;
+            } catch (error) {
+                console.error('❌ Error searching Firebase:', error);
+                return null;
+            }
         }
 
         // ========================================
