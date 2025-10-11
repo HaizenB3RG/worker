@@ -569,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.2.3 (Clear Submissions - Local View Only)');
+        console.log('📱 Worker App Version: 4.3.0 (Full Multi-Device Sync - Delete Sessions)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1690,8 +1690,16 @@
             }).join('');
         }
 
-        function deleteHistory(index) {
+        async function deleteHistory(index) {
             const data = loadData();
+            const session = data.history[index];
+            
+            // Delete from Firebase if it's an unsent session
+            if (session.timestamp && (session.sent === false || session.sent === undefined)) {
+                await window.deleteDraftFromFirebase(session.timestamp);
+            }
+            
+            // Delete from local storage
             data.history.splice(index, 1);
             saveData(data);
             
