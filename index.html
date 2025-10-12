@@ -569,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.3.2 (Fix: Auto-find Firebase keys for payments)');
+        console.log('📱 Worker App Version: 4.3.3 (Fix: Await Firebase key lookup)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2645,7 +2645,7 @@
             
             // Update Firebase
             try {
-                const firebaseKey = findFirebaseKeyByTimestamp(submission.timestamp);
+                const firebaseKey = await findFirebaseKeyByTimestamp(submission.timestamp);
                 console.log('📤 Attempting to sync payment to Firebase...');
                 console.log('   Submission timestamp:', submission.timestamp);
                 console.log('   Firebase key:', firebaseKey);
