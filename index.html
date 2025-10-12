@@ -569,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.3.6 (Auto-cleanup corrupted sessions from Firebase)');
+        console.log('📱 Worker App Version: 4.4.0 (Stable device fingerprint - No re-registration!)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -601,6 +601,76 @@
         function hideRegistrationScreen() {
             document.getElementById('registrationScreen').style.display = 'none';
             document.querySelector('.container').style.display = 'block';
+        }
+
+        // ========================================
+        // 🔑 STABLE DEVICE FINGERPRINTING
+        // ========================================
+        // Generate a stable device ID based on browser fingerprint
+        async function generateStableDeviceId() {
+            // Collect browser characteristics
+            const fingerprint = {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                screenResolution: `${screen.width}x${screen.height}`,
+                colorDepth: screen.colorDepth,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+                deviceMemory: navigator.deviceMemory || 'unknown'
+            };
+            
+            // Create a consistent string from fingerprint
+            const fingerprintString = JSON.stringify(fingerprint);
+            
+            // Generate stable hash using crypto API
+            const encoder = new TextEncoder();
+            const data = encoder.encode(fingerprintString);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            console.log('🔑 Generated stable device ID:', hashHex.substring(0, 20));
+            return hashHex; // Returns same ID for same browser every time!
+        }
+
+        // Check if device is already registered in Firebase
+        async function checkExistingDevice() {
+            try {
+                console.log('🔍 Checking if device is already registered...');
+                const stableDeviceId = await generateStableDeviceId();
+                
+                // Check in registeredDevices
+                const deviceRef = ref(database, 'registeredDevices/' + stableDeviceId);
+                const deviceSnapshot = await get(deviceRef);
+                
+                if (deviceSnapshot.exists()) {
+                    const deviceData = deviceSnapshot.val();
+                    console.log('✅ Device already registered:', deviceData);
+                    
+                    if (deviceData.role === 'worker' && deviceData.workerName) {
+                        // Device is already registered - load data and skip registration
+                        localStorage.setItem('deviceId', stableDeviceId);
+                        localStorage.setItem('deviceRole', 'worker');
+                        localStorage.setItem('workerName', deviceData.workerName);
+                        
+                        // Update last active time
+                        await update(deviceRef, { lastActive: Date.now() });
+                        
+                        // Load worker data from Firebase
+                        await loadWorkerDataFromFirebase(deviceData.workerName);
+                        
+                        console.log('✅ Auto-loaded existing device registration for:', deviceData.workerName);
+                        return true; // Device already registered
+                    }
+                }
+                
+                console.log('ℹ️ Device not registered yet');
+                return false; // Device not registered
+            } catch (error) {
+                console.error('❌ Error checking existing device:', error);
+                return false;
+            }
         }
 
         // Register device with code
@@ -650,13 +720,9 @@
                 const workerName = codeData.workerName || null;
                 console.log('🔵 [7] Worker name from code:', workerName);
                 
-                // Get current user's UID (from anonymous auth)
-                if (!currentUser) {
-                    throw new Error('Authentication error. Please refresh the page.');
-                }
-                
-                const deviceId = currentUser.uid;
-                console.log('🔵 [8] Device ID:', deviceId);
+                // Generate stable device ID based on browser fingerprint
+                const deviceId = await generateStableDeviceId();
+                console.log('🔵 [8] Stable Device ID:', deviceId.substring(0, 20));
                 
                 // If worker name exists in code, ask for confirmation
                 if (workerName) {
@@ -816,64 +882,20 @@
             
             if (user) {
                 currentUser = user;
-                console.log('👤 User UID:', user.uid);
+                console.log('👤 User authenticated');
                 
-                // Check if device is registered
-                const registration = checkDeviceRegistration();
+                // 🔥 NEW: Check Firebase first using stable device fingerprint
+                const isRegistered = await checkExistingDevice();
                 
-                if (registration) {
-                    // Device is registered - verify in Firebase
-                    try {
-                        const deviceRef = ref(database, 'registeredDevices/' + registration.deviceId);
-                        const deviceSnapshot = await get(deviceRef);
-                        
-                        if (deviceSnapshot.exists()) {
-                            const deviceData = deviceSnapshot.val();
-                            
-                            if (deviceData.role === 'worker') {
-                                console.log('✅ Device verified as registered worker');
-                                console.log('👷 Worker:', deviceData.workerName);
-                                isDeviceRegistered = true;
-                                
-                                // Ensure worker name is in localStorage
-                                if (deviceData.workerName && !localStorage.getItem('workerName')) {
-                                    localStorage.setItem('workerName', deviceData.workerName);
-                                }
-                                
-                                // Ensure worker name is in data structure
-                                const currentData = loadData();
-                                if (!currentData.workerName && deviceData.workerName) {
-                                    currentData.workerName = deviceData.workerName;
-                                    saveData(currentData);
-                                }
-                                
-                                // Update last active
-                                await update(deviceRef, { lastActive: Date.now() });
-                                
-                                // Hide registration screen and show app
-                                hideRegistrationScreen();
-                                
-                                // Initialize app
-                                initApp();
-                            } else {
-                                console.error('❌ Device role mismatch');
-                                localStorage.clear();
-                                showRegistrationScreen();
-                            }
-                        } else {
-                            console.error('❌ Device not found in Firebase');
-                            localStorage.removeItem('deviceId');
-                            localStorage.removeItem('deviceRole');
-                            localStorage.removeItem('workerName');
-                            showRegistrationScreen();
-                        }
-                    } catch (error) {
-                        console.error('❌ Device verification error:', error);
-                        showRegistrationScreen();
-                    }
+                if (isRegistered) {
+                    // Device found in Firebase - auto-loaded!
+                    console.log('✅ Device auto-loaded from Firebase');
+                    isDeviceRegistered = true;
+                    hideRegistrationScreen();
+                    initApp();
                 } else {
                     // Device not registered - show registration screen
-                    console.log('⚠️ Device not registered locally');
+                    console.log('⚠️ Device not registered, showing registration screen');
                     setTimeout(() => showRegistrationScreen(), 100);
                 }
             } else {
