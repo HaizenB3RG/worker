@@ -569,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.3.4 (Sync submissions to History tab)');
+        console.log('📱 Worker App Version: 4.3.5 (Fix: Sync individual sessions to History)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1170,22 +1170,29 @@
                         // ========================================
                         // 🔥 ALSO UPDATE data.history[] FOR HISTORY TAB
                         // ========================================
-                        const historyIndex = data.history.findIndex(h => h.timestamp === firebaseSub.timestamp);
-                        
-                        if (historyIndex === -1) {
-                            // New submission not in history - add it
-                            console.log('📝 Adding submission to history:', firebaseSub.timestamp);
-                            data.history.push({
-                                ...firebaseSub,
-                                sent: true
+                        // Submission contains sessions[] array - sync each session to history
+                        if (firebaseSub.sessions && Array.isArray(firebaseSub.sessions)) {
+                            firebaseSub.sessions.forEach(session => {
+                                const historyIndex = data.history.findIndex(h => 
+                                    h.endTime === session.endTime && h.duration === session.duration
+                                );
+                                
+                                if (historyIndex === -1) {
+                                    // New session not in history - add it
+                                    console.log('📝 Adding session to history:', session.endTime);
+                                    data.history.push({
+                                        ...session,
+                                        sent: true
+                                    });
+                                } else {
+                                    // Update existing history entry - mark as sent
+                                    console.log('🔄 Updating session in history:', session.endTime);
+                                    data.history[historyIndex] = {
+                                        ...session,
+                                        sent: true
+                                    };
+                                }
                             });
-                        } else {
-                            // Update existing history entry with latest data from Firebase
-                            console.log('🔄 Updating history entry:', firebaseSub.timestamp);
-                            data.history[historyIndex] = {
-                                ...firebaseSub,
-                                sent: true
-                            };
                         }
                     });
                     
