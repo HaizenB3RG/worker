@@ -569,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.3.5 (Fix: Sync individual sessions to History)');
+        console.log('📱 Worker App Version: 4.3.6 (Auto-cleanup corrupted sessions from Firebase)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1047,6 +1047,75 @@
         }
         
         // ========================================
+        // 🧹 CLEANUP CORRUPTED SESSIONS
+        // ========================================
+        async function cleanupCorruptedSessions() {
+            try {
+                console.log('🧹 Checking for corrupted sessions...');
+                const data = loadData();
+                let cleaned = 0;
+                
+                // Find corrupted sessions (NaN, undefined, Invalid Date)
+                const corruptedSessions = data.history.filter(h => {
+                    const isCorrupted = 
+                        !h.endTime || 
+                        !h.startTime || 
+                        isNaN(new Date(h.endTime).getTime()) ||
+                        isNaN(h.duration) ||
+                        h.payment === undefined ||
+                        h.clientName === undefined;
+                    
+                    if (isCorrupted) {
+                        console.log('🗑️ Found corrupted session:', h);
+                    }
+                    
+                    return isCorrupted;
+                });
+                
+                if (corruptedSessions.length > 0) {
+                    console.log(`🗑️ Cleaning ${corruptedSessions.length} corrupted sessions...`);
+                    
+                    // Remove from local storage
+                    data.history = data.history.filter(h => !corruptedSessions.includes(h));
+                    saveData(data);
+                    
+                    // Also check and clean from Firebase submissions
+                    const workerName = getWorkerName();
+                    const submissionsRef = ref(database, 'submissions');
+                    const snapshot = await window.firebaseGet(submissionsRef);
+                    
+                    if (snapshot.exists()) {
+                        const submissions = snapshot.val();
+                        for (const [key, submission] of Object.entries(submissions)) {
+                            if (submission.workerName === workerName) {
+                                // Check if submission has corrupted sessions
+                                if (submission.sessions && Array.isArray(submission.sessions)) {
+                                    const hasCorrupted = submission.sessions.some(s => 
+                                        !s.endTime || !s.startTime || isNaN(new Date(s.endTime).getTime())
+                                    );
+                                    
+                                    if (hasCorrupted) {
+                                        console.log('🗑️ Deleting corrupted submission from Firebase:', key);
+                                        await window.firebaseRemove(ref(database, `submissions/${key}`));
+                                        cleaned++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    renderHistory();
+                    updateSubmitSummary();
+                    updateTodaySummary();
+                    
+                    console.log(`✅ Cleaned ${corruptedSessions.length} local sessions and ${cleaned} Firebase submissions`);
+                }
+            } catch (error) {
+                console.error('❌ Cleanup error:', error);
+            }
+        }
+        
+        // ========================================
         // 🚀 MAIN APP INITIALIZATION
         // ========================================
         
@@ -1055,6 +1124,9 @@
             
             // Check if we need to recover data from Firebase
             recoverDataFromFirebase();
+            
+            // Clean up any corrupted sessions
+            cleanupCorruptedSessions();
             
             // ========================================
             // 🔥 REAL-TIME LISTENER: DRAFTS (UNSENT SESSIONS)
