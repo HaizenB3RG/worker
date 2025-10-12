@@ -212,9 +212,7 @@
         <div id="timer-view" class="view active">
             <div class="card">
                 <div id="setup-section">
-                    <h2 style="margin-bottom: 20px;" data-i18n="select_job">Select or Create Job</h2>
-                    <div id="saved-jobs-list"></div>
-                    <div style="text-align: center; margin: 20px 0; color: #94a3b8; font-weight: 600;" data-i18n="or_text">OR</div>
+                    <h2 style="margin-bottom: 20px;" data-i18n="select_job">Create Job</h2>
                     <div class="input-group">
                         <label data-i18n="job_site">📍 Job Site</label>
                         <input type="text" id="job-site" placeholder="e.g., Casa Marina Beach">
@@ -266,10 +264,6 @@
             <div class="card">
                 <h2 style="margin-bottom: 20px;" data-i18n="manual_entry_title">📝 Manual Time Entry</h2>
                 <p style="color: #64748b; margin-bottom: 20px; font-size: 14px;" data-i18n="manual_entry_desc">Enter start and stop times to calculate work duration and payment</p>
-                
-                <div id="manual-saved-jobs" style="margin-bottom: 20px;"></div>
-                
-                <div style="text-align: center; margin: 20px 0; color: #94a3b8; font-weight: 600;" data-i18n="or_text">OR</div>
                 
                 <div class="input-group">
                     <label data-i18n="job_site">📍 Job Site</label>
@@ -569,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.4.0 (Stable device fingerprint - No re-registration!)');
+        console.log('📱 Worker App Version: 4.4.1 (Remove saved jobs from Live Timer and Manual Entry)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
