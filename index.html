@@ -569,7 +569,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.3.3 (Fix: Await Firebase key lookup)');
+        console.log('📱 Worker App Version: 4.3.4 (Sync submissions to History tab)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1166,11 +1166,35 @@
                                 updatedSubs++;
                             }
                         }
+                        
+                        // ========================================
+                        // 🔥 ALSO UPDATE data.history[] FOR HISTORY TAB
+                        // ========================================
+                        const historyIndex = data.history.findIndex(h => h.timestamp === firebaseSub.timestamp);
+                        
+                        if (historyIndex === -1) {
+                            // New submission not in history - add it
+                            console.log('📝 Adding submission to history:', firebaseSub.timestamp);
+                            data.history.push({
+                                ...firebaseSub,
+                                sent: true
+                            });
+                        } else {
+                            // Update existing history entry with latest data from Firebase
+                            console.log('🔄 Updating history entry:', firebaseSub.timestamp);
+                            data.history[historyIndex] = {
+                                ...firebaseSub,
+                                sent: true
+                            };
+                        }
                     });
                     
                     if (addedSubs > 0 || updatedSubs > 0) {
                         saveData(data);
                         renderSubmissionHistory();
+                        renderHistory(); // 🔥 Update History tab too!
+                        updateSubmitSummary();
+                        updateTodaySummary();
                         console.log(`✅ Submissions synced: +${addedSubs} added, ${updatedSubs} updated`);
                     }
                 }
