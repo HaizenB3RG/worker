@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.4.7 (Add try-catch to catch exact error in calculateManual)');
+        console.log('📱 Worker App Version: 4.5.0 (FIXED: timeFormat initialization order)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1317,6 +1317,11 @@
         // ========================================
         
         let currentLang = localStorage.getItem('language') || 'en';
+        
+        // ========================================
+        // 🕐 TIME FORMAT (MUST BE EARLY!)
+        // ========================================
+        let timeFormat = localStorage.getItem('timeFormat') || '24h';
         
         const translations = {
             en: {
@@ -3143,7 +3148,7 @@
         // 🕐 TIME FORMAT FEATURE (FEATURE 2)
         // ========================================
         
-        let timeFormat = localStorage.getItem('timeFormat') || '24h';
+        // timeFormat is now declared at the top of the script (line 1324)
 
         window.setTimeFormat = function(format) {
             console.log('🔘 setTimeFormat called with:', format);
