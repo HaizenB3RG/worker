@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.5.0 (FIXED: timeFormat initialization order)');
+        console.log('📱 Worker App Version: 4.5.1 (Fix renderManualSavedJobs crash + debug 12h button)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2400,20 +2400,10 @@
         let manualCalculation = null;
 
         function renderManualSavedJobs() {
-            const data = loadData();
-            const container = document.getElementById('manual-saved-jobs');
-            if (data.jobs.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 20px;">' + t('no_saved_jobs') + '</p>';
-                return;
-            }
-            container.innerHTML = data.jobs.map((job, i) => 
-                '<div class="saved-job-item" data-index="' + i + '" onclick="selectManualJob(' + i + ')">' +
-                '<div>' +
-                '<div style="font-size: 13px; color: #64748b;">📍 ' + (job.jobSite || job.name || 'Unknown') + '</div>' +
-                '<div style="font-weight: 600; margin: 3px 0;">👤 ' + (job.clientName || job.name || 'Unknown') + '</div>' +
-                '<div style="font-size: 14px; color: #64748b;">💰 ' + job.rate + ' MAD/hour</div></div>' +
-                '<button class="delete-btn" onclick="event.stopPropagation(); deleteJobFromManual(' + i + ')">' + t('delete') + '</button></div>'
-            ).join('');
+            // Removed: Saved jobs section no longer exists in Manual Entry tab
+            // This function is kept for backwards compatibility but does nothing
+            console.log('ℹ️ renderManualSavedJobs called (deprecated - saved jobs removed)');
+            return;
         }
 
         function deleteJobFromManual(index) {
@@ -2517,9 +2507,15 @@
             };
 
             console.log('✅ Setting result display...');
-            document.getElementById('manual-duration').textContent = formatHM(durationSeconds);
-            document.getElementById('manual-payment').textContent = payment + ' MAD';
-            document.getElementById('manual-result').style.display = 'block';
+            const durationEl = document.getElementById('manual-duration');
+            const paymentEl = document.getElementById('manual-payment');
+            const resultEl = document.getElementById('manual-result');
+            
+            console.log('🔍 Elements found:', { durationEl: !!durationEl, paymentEl: !!paymentEl, resultEl: !!resultEl });
+            
+            if (durationEl) durationEl.textContent = formatHM(durationSeconds);
+            if (paymentEl) paymentEl.textContent = payment + ' MAD';
+            if (resultEl) resultEl.style.display = 'block';
             console.log('✅ Result should be visible now!');
 
             // Save job if it's new
@@ -3151,7 +3147,8 @@
         // timeFormat is now declared at the top of the script (line 1324)
 
         window.setTimeFormat = function(format) {
-            console.log('🔘 setTimeFormat called with:', format);
+            console.error('🔘🔘🔘 setTimeFormat CALLED! Format:', format);
+            alert('setTimeFormat called with: ' + format);
             timeFormat = format;
             localStorage.setItem('timeFormat', format);
             
