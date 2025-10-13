@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.4.4 (More detailed time validation debugging)');
+        console.log('📱 Worker App Version: 4.4.5 (Debug: Check if calculate stops after field validation)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2443,9 +2443,13 @@
                 await customAlert('Please fill in all fields!', '⚠️');
                 return;
             }
+            
+            console.log('✅ All fields filled, proceeding...');
+            console.log('⏰ Current timeFormat:', timeFormat);
 
             // If 12-hour format, convert based on AM/PM selection
             if (timeFormat === '12h') {
+                console.log('🔄 Converting 12h to 24h...');
                 const startPeriod = document.getElementById('manual-start-period').value;
                 const stopPeriod = document.getElementById('manual-stop-period').value;
                 
