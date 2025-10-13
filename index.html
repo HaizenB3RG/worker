@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.4.2 (Add validation messages to Manual Entry calculate)');
+        console.log('📱 Worker App Version: 4.4.3 (Debug Manual Entry calculate issue)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2467,9 +2467,15 @@
             const day = String(today.getDate()).padStart(2, '0');
             const dateString = year + '-' + month + '-' + day;
 
+            console.log('📅 Date string:', dateString);
+            console.log('⏰ Times after conversion:', { startTime, stopTime });
+
             // Combine date with time
             const start = new Date(dateString + 'T' + startTime);
             let stop = new Date(dateString + 'T' + stopTime);
+
+            console.log('📅 Start date:', start);
+            console.log('📅 Stop date:', stop);
 
             // If stop time is before start time, assume it's next day
             if (stop <= start) {
@@ -2478,6 +2484,9 @@
 
             const durationSeconds = Math.floor((stop - start) / 1000);
             const payment = calculatePayment(durationSeconds, rate);
+
+            console.log('⏱️ Duration (seconds):', durationSeconds);
+            console.log('💰 Payment:', payment);
 
             manualCalculation = {
                 jobSite: jobSite,
@@ -2489,9 +2498,11 @@
                 payment: payment
             };
 
+            console.log('✅ Setting result display...');
             document.getElementById('manual-duration').textContent = formatHM(durationSeconds);
             document.getElementById('manual-payment').textContent = payment + ' MAD';
             document.getElementById('manual-result').style.display = 'block';
+            console.log('✅ Result should be visible now!');
 
             // Save job if it's new
             const data = loadData();
