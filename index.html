@@ -368,6 +368,17 @@
                         <h3 style="color: #1e293b; margin: 0;" data-i18n="submission_history">📋 Submission History</h3>
                         <button class="btn" style="background: #dc2626; color: white; padding: 10px 16px; width: auto; font-size: 13px; font-weight: 600;" onclick="clearSubmissionHistory()" data-i18n="clear_submission_history">🗑️ Clear Submission History</button>
                     </div>
+                    
+                    <!-- Toggle Tabs: Active vs Completed -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <button id="submission-tab-active" onclick="switchSubmissionTab('active')" style="flex: 1; padding: 12px; border: 2px solid #2563eb; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: #2563eb; color: white;">
+                            📊 <span data-i18n="active_submissions">Active</span> (<span id="active-count">0</span>)
+                        </button>
+                        <button id="submission-tab-completed" onclick="switchSubmissionTab('completed')" style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: white; color: #64748b;">
+                            ✅ <span data-i18n="completed_submissions">Completed</span> (<span id="completed-count">0</span>)
+                        </button>
+                    </div>
+                    
                     <div id="submission-list"></div>
                 </div>
             </div>
@@ -563,7 +574,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.7.0 (Delete history syncs to Firebase - real-time across devices)');
+        console.log('📱 Worker App Version: 4.8.0 (Submission tabs: Active vs Completed)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1322,6 +1333,7 @@
         // 🕐 TIME FORMAT (MUST BE EARLY!)
         // ========================================
         let timeFormat = localStorage.getItem('timeFormat') || '24h';
+        let submissionTab = localStorage.getItem('submissionTab') || 'active'; // Track which tab is active
         
         const translations = {
             en: {
@@ -1384,7 +1396,11 @@
                 total_hours: "Total Hours:",
                 no_sessions: "No sessions to send",
                 submission_history: "Submission History",
+                active_submissions: "Active",
+                completed_submissions: "Completed",
                 no_submissions: "No submissions yet",
+                no_active_submissions: "No active submissions",
+                no_completed_submissions: "No completed submissions",
                 waiting_approval: "Waiting for admin approval",
                 approved_by: "Approved by admin",
                 paid: "Paid:",
@@ -1485,7 +1501,11 @@
                 total_hours: "إجمالي الساعات:",
                 no_sessions: "لا توجد جلسات للإرسال",
                 submission_history: "سجل الإرسال",
+                active_submissions: "نشط",
+                completed_submissions: "مكتمل",
                 no_submissions: "لا توجد إرسالات بعد",
+                no_active_submissions: "لا توجد إرسالات نشطة",
+                no_completed_submissions: "لا توجد إرسالات مكتملة",
                 waiting_approval: "في انتظار مراجعة المشرف",
                 approved_by: "تمت المراجعة من المشرف",
                 paid: "المدفوع:",
@@ -1578,6 +1598,26 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             applyLanguage();
+            
+            // Initialize submission tab buttons state
+            const savedTab = localStorage.getItem('submissionTab') || 'active';
+            if (savedTab === 'completed') {
+                // Set completed tab as active on load if it was selected before
+                setTimeout(() => {
+                    const btnCompleted = document.getElementById('submission-tab-completed');
+                    if (btnCompleted) {
+                        btnCompleted.style.background = '#2563eb';
+                        btnCompleted.style.color = 'white';
+                        btnCompleted.style.borderColor = '#2563eb';
+                    }
+                    const btnActive = document.getElementById('submission-tab-active');
+                    if (btnActive) {
+                        btnActive.style.background = 'white';
+                        btnActive.style.color = '#64748b';
+                        btnActive.style.borderColor = '#e2e8f0';
+                    }
+                }, 100);
+            }
         });
 
         // ========================================
@@ -2275,6 +2315,37 @@
             }, 100);
         }
 
+        // Switch between Active and Completed submission tabs
+        function switchSubmissionTab(tab) {
+            submissionTab = tab;
+            localStorage.setItem('submissionTab', tab);
+            
+            // Update button styles
+            const btnActive = document.getElementById('submission-tab-active');
+            const btnCompleted = document.getElementById('submission-tab-completed');
+            
+            if (tab === 'active') {
+                btnActive.style.background = '#2563eb';
+                btnActive.style.color = 'white';
+                btnActive.style.borderColor = '#2563eb';
+                
+                btnCompleted.style.background = 'white';
+                btnCompleted.style.color = '#64748b';
+                btnCompleted.style.borderColor = '#e2e8f0';
+            } else {
+                btnCompleted.style.background = '#2563eb';
+                btnCompleted.style.color = 'white';
+                btnCompleted.style.borderColor = '#2563eb';
+                
+                btnActive.style.background = 'white';
+                btnActive.style.color = '#64748b';
+                btnActive.style.borderColor = '#e2e8f0';
+            }
+            
+            // Re-render submissions with filter
+            renderSubmissionHistory();
+        }
+
         function renderSubmissionHistory() {
             const data = loadData();
             const submissions = data.submissions || [];
@@ -2282,12 +2353,26 @@
 
             console.log('Rendering submissions:', submissions); // Debug
 
-            if (submissions.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 20px;">' + t('no_submissions') + '</p>';
+            // Categorize submissions
+            const activeSubmissions = submissions.filter(s => s.paymentStatus !== 'fully_paid');
+            const completedSubmissions = submissions.filter(s => s.paymentStatus === 'fully_paid');
+            
+            // Update counts
+            const activeCountEl = document.getElementById('active-count');
+            const completedCountEl = document.getElementById('completed-count');
+            if (activeCountEl) activeCountEl.textContent = activeSubmissions.length;
+            if (completedCountEl) completedCountEl.textContent = completedSubmissions.length;
+            
+            // Filter based on current tab
+            const filteredSubmissions = submissionTab === 'active' ? activeSubmissions : completedSubmissions;
+
+            if (filteredSubmissions.length === 0) {
+                const emptyMessage = submissionTab === 'active' ? t('no_active_submissions') : t('no_completed_submissions');
+                container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 20px;">' + emptyMessage + '</p>';
                 return;
             }
 
-            const sorted = [...submissions].sort((a, b) => b.timestamp - a.timestamp);
+            const sorted = [...filteredSubmissions].sort((a, b) => b.timestamp - a.timestamp);
             container.innerHTML = sorted.slice(0, 10).map((s, index) => {
                 const date = new Date(s.date);
                 const status = s.status || 'pending';
