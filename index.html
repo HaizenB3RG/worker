@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.4.5 (Debug: Check if calculate stops after field validation)');
+        console.log('📱 Worker App Version: 4.4.6 (Make setTimeFormat globally accessible)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -3136,7 +3136,8 @@
         
         let timeFormat = localStorage.getItem('timeFormat') || '24h';
 
-        function setTimeFormat(format) {
+        window.setTimeFormat = function(format) {
+            console.log('🔘 setTimeFormat called with:', format);
             timeFormat = format;
             localStorage.setItem('timeFormat', format);
             
