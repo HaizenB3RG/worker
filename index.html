@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.6.1 (Fix renderSavedJobs crash - remove saved jobs functionality)');
+        console.log('📱 Worker App Version: 4.7.0 (Delete history syncs to Firebase - real-time across devices)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1808,9 +1808,21 @@
             const data = loadData();
             const session = data.history[index];
             
-            // Delete from Firebase if it's an unsent session
-            if (session.timestamp && (session.sent === false || session.sent === undefined)) {
-                await window.deleteDraftFromFirebase(session.timestamp);
+            console.log('🗑️ Deleting session:', session);
+            
+            // Delete from Firebase (for both sent and unsent sessions)
+            if (session.timestamp) {
+                // If unsent session, delete from drafts
+                if (session.sent === false || session.sent === undefined) {
+                    console.log('🗑️ Deleting unsent session from Firebase drafts...');
+                    await window.deleteDraftFromFirebase(session.timestamp);
+                } else if (session.sent === true && session.firebaseKey) {
+                    // If sent session, delete from submissions
+                    console.log('🗑️ Deleting sent session from Firebase submissions...');
+                    const submissionRef = ref(database, `submissions/${session.firebaseKey}`);
+                    await window.firebaseRemove(submissionRef);
+                    console.log('✅ Deleted from Firebase submissions');
+                }
             }
             
             // Delete from local storage
@@ -1819,6 +1831,8 @@
             
             renderHistory();
             updateTodaySummary();
+            
+            console.log('✅ Session deleted successfully');
         }
 
         // Clear only unsent sessions
