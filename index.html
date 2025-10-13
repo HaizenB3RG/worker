@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.4.6 (Make setTimeFormat globally accessible)');
+        console.log('📱 Worker App Version: 4.4.7 (Add try-catch to catch exact error in calculateManual)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2431,21 +2431,24 @@
         }
 
         async function calculateManual() {
-            const jobSite = document.getElementById('manual-job-site').value.trim();
-            const clientName = document.getElementById('manual-client-name').value.trim();
-            const rate = parseFloat(document.getElementById('manual-hourly-rate').value);
-            let startTime = document.getElementById('manual-start-time').value.trim();
-            let stopTime = document.getElementById('manual-stop-time').value.trim();
+            try {
+                const jobSite = document.getElementById('manual-job-site').value.trim();
+                const clientName = document.getElementById('manual-client-name').value.trim();
+                const rate = parseFloat(document.getElementById('manual-hourly-rate').value);
+                let startTime = document.getElementById('manual-start-time').value.trim();
+                let stopTime = document.getElementById('manual-stop-time').value.trim();
 
-            console.log('📊 Calculate Manual called:', { jobSite, clientName, rate, startTime, stopTime });
+                console.log('📊 Calculate Manual called:', { jobSite, clientName, rate, startTime, stopTime });
 
-            if (!jobSite || !clientName || !rate || !startTime || !stopTime) {
-                await customAlert('Please fill in all fields!', '⚠️');
-                return;
-            }
-            
-            console.log('✅ All fields filled, proceeding...');
-            console.log('⏰ Current timeFormat:', timeFormat);
+                if (!jobSite || !clientName || !rate || !startTime || !stopTime) {
+                    await customAlert('Please fill in all fields!', '⚠️');
+                    return;
+                }
+                
+                console.log('✅ All fields filled, proceeding...');
+                console.log('⏰ Checking timeFormat variable...');
+                console.log('⏰ timeFormat =', timeFormat);
+                console.log('⏰ typeof timeFormat =', typeof timeFormat);
 
             // If 12-hour format, convert based on AM/PM selection
             if (timeFormat === '12h') {
@@ -2520,6 +2523,12 @@
                 data.jobs.push({ jobSite: jobSite, clientName: clientName, rate: rate });
                 saveData(data);
                 renderManualSavedJobs();
+            }
+            } catch (error) {
+                console.error('❌ ERROR IN CALCULATE MANUAL:', error);
+                console.error('❌ Error message:', error.message);
+                console.error('❌ Error stack:', error.stack);
+                await customAlert(`Calculation error: ${error.message}`, '❌');
             }
         }
 
