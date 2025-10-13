@@ -342,10 +342,10 @@
                 <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 10px; border: 2px solid #cbd5e1;">
                     <h3 style="color: #475569; margin-bottom: 15px;">🕐 <span data-i18n="time_format">Time Format</span></h3>
                     <div style="display: flex; gap: 10px;">
-                        <button id="time-format-24h" onclick="console.error('24H BUTTON CLICKED!'); alert('24H BUTTON CLICKED!'); setTimeFormat('24h');" style="flex: 1; padding: 12px; border: 2px solid #2563eb; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: #2563eb; color: white;">
+                        <button id="time-format-24h" onclick="setTimeFormat('24h')" style="flex: 1; padding: 12px; border: 2px solid #2563eb; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: #2563eb; color: white;">
                             <span data-i18n="time_format_24h">24-hour (14:30)</span>
                         </button>
-                        <button id="time-format-12h" onclick="console.error('12H BUTTON CLICKED!'); alert('12H BUTTON CLICKED!'); setTimeFormat('12h');" style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: white; color: #64748b;">
+                        <button id="time-format-12h" onclick="setTimeFormat('12h')" style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: white; color: #64748b;">
                             <span data-i18n="time_format_12h">12-hour (2:30 PM)</span>
                         </button>
                     </div>
@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.5.2 (Add inline onclick debug to time format buttons)');
+        console.log('📱 Worker App Version: 4.6.0 (FIXED: Use function declaration for setTimeFormat)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -3146,9 +3146,8 @@
         
         // timeFormat is now declared at the top of the script (line 1324)
 
-        window.setTimeFormat = function(format) {
-            console.error('🔘🔘🔘 setTimeFormat CALLED! Format:', format);
-            alert('setTimeFormat called with: ' + format);
+        function setTimeFormat(format) {
+            console.error('🔘 setTimeFormat CALLED! Format:', format);
             timeFormat = format;
             localStorage.setItem('timeFormat', format);
             
