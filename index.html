@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.4.1 (Remove saved jobs from Live Timer and Manual Entry)');
+        console.log('📱 Worker App Version: 4.4.2 (Add validation messages to Manual Entry calculate)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2430,14 +2430,17 @@
             document.querySelectorAll('#manual-saved-jobs .saved-job-item')[index].classList.add('selected');
         }
 
-        function calculateManual() {
+        async function calculateManual() {
             const jobSite = document.getElementById('manual-job-site').value.trim();
             const clientName = document.getElementById('manual-client-name').value.trim();
             const rate = parseFloat(document.getElementById('manual-hourly-rate').value);
             let startTime = document.getElementById('manual-start-time').value.trim();
             let stopTime = document.getElementById('manual-stop-time').value.trim();
 
+            console.log('📊 Calculate Manual called:', { jobSite, clientName, rate, startTime, stopTime });
+
             if (!jobSite || !clientName || !rate || !startTime || !stopTime) {
+                await customAlert('Please fill in all fields!', '⚠️');
                 return;
             }
 
@@ -2453,6 +2456,7 @@
             // Validate time format (HH:MM)
             const timeRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9])$/;
             if (!timeRegex.test(startTime) || !timeRegex.test(stopTime)) {
+                await customAlert('Invalid time format! Use HH:MM (e.g., 09:30)', '⚠️');
                 return;
             }
 
