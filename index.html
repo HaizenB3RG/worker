@@ -563,7 +563,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.6.0 (FIXED: Use function declaration for setTimeFormat)');
+        console.log('📱 Worker App Version: 4.6.1 (Fix renderSavedJobs crash - remove saved jobs functionality)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1752,19 +1752,9 @@
         }
 
         function renderSavedJobs() {
-            const data = loadData();
-            const container = document.getElementById('saved-jobs-list');
-            if (data.jobs.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 20px;">' + t('no_saved_jobs') + '</p>';
-                return;
-            }
-            container.innerHTML = data.jobs.map((job, i) => 
-                '<div class="saved-job-item" data-index="' + i + '" onclick="selectJob(' + i + ')">' +
-                '<div>' +
-                '<div style="font-size: 13px; color: #64748b;">📍 ' + (job.jobSite || job.name || 'Unknown') + '</div>' +
-                '<div style="font-weight: 600; margin: 3px 0;">👤 ' + (job.clientName || job.name || 'Unknown') + '</div>' +
-                '<div style="font-size: 14px; color: #64748b;">💰 ' + job.rate + ' MAD/hour</div></div></div>'
-            ).join('');
+            // Removed: Saved jobs section no longer exists in Live Timer tab
+            console.log('ℹ️ renderSavedJobs called (deprecated - saved jobs removed)');
+            return;
         }
 
         function selectJob(index) {
