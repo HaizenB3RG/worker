@@ -574,7 +574,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.8.3 (FIXED: Manual entry history display + deletion sync)');
+        console.log('📱 Worker App Version: 4.8.4 (FIXED: Admin deletion now removes from worker history too)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1305,14 +1305,36 @@
                     
                     if (deletedSubs.length > 0) {
                         console.log(`🗑️ Detected ${deletedSubs.length} deleted submissions from Firebase`);
+                        
+                        // Collect all session timestamps from deleted submissions
+                        const deletedSessionTimestamps = [];
                         deletedSubs.forEach(deleted => {
                             console.log('🗑️ Removing deleted submission:', deleted.timestamp);
+                            if (deleted.sessions && Array.isArray(deleted.sessions)) {
+                                deleted.sessions.forEach(session => {
+                                    if (session.endTime) {
+                                        deletedSessionTimestamps.push(session.endTime);
+                                    }
+                                });
+                            }
                         });
                         
                         // Remove deleted submissions from local data
                         data.submissions = data.submissions.filter(localSub => 
                             firebaseTimestamps.includes(localSub.timestamp)
                         );
+                        
+                        // ========================================
+                        // 🔥 ALSO REMOVE FROM data.history[]
+                        // ========================================
+                        if (deletedSessionTimestamps.length > 0) {
+                            const historyBefore = data.history.length;
+                            data.history = data.history.filter(h => 
+                                !deletedSessionTimestamps.includes(h.endTime)
+                            );
+                            const historyAfter = data.history.length;
+                            console.log(`🗑️ Removed ${historyBefore - historyAfter} sessions from history`);
+                        }
                     }
                     
                     if (addedSubs > 0 || updatedSubs > 0 || deletedSubs.length > 0) {
