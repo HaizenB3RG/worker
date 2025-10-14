@@ -265,6 +265,17 @@
                 <h2 style="margin-bottom: 20px;" data-i18n="manual_entry_title">📝 Manual Time Entry</h2>
                 <p style="color: #64748b; margin-bottom: 20px; font-size: 14px;" data-i18n="manual_entry_desc">Enter start and stop times to calculate work duration and payment</p>
                 
+                <!-- Toggle buttons for entry method -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="manual-method-time-range" onclick="switchManualMethod('time-range')" style="flex: 1; padding: 12px; border: 2px solid #2563eb; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: #2563eb; color: white;">
+                        🕐 <span data-i18n="time_range_entry">Time Range</span>
+                    </button>
+                    <button id="manual-method-duration" onclick="switchManualMethod('duration')" style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: white; color: #64748b;">
+                        ⏱️ <span data-i18n="duration_entry">Duration Entry</span>
+                    </button>
+                </div>
+                
+                <!-- Common fields (both methods) -->
                 <div class="input-group">
                     <label data-i18n="job_site">📍 Job Site</label>
                     <input type="text" id="manual-job-site" placeholder="e.g., Casa Marina Beach">
@@ -276,29 +287,50 @@
                 </div>
 
                 <div class="input-group">
+                    <label>📅 <span data-i18n="work_date">Work Date</span></label>
+                    <input type="date" id="manual-work-date" style="padding: 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; width: 100%;">
+                </div>
+
+                <div class="input-group">
                     <label data-i18n="hourly_rate">💰 Hourly Rate (MAD)</label>
                     <input type="number" id="manual-hourly-rate" placeholder="e.g., 500">
                 </div>
 
-                <div class="input-group">
-                    <label data-i18n="start_time">Start Time (24-hour format: HH:MM)</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="manual-start-time" placeholder="08:30" pattern="[0-2][0-9]:[0-5][0-9]" maxlength="5" style="flex: 1;">
-                        <select id="manual-start-period" style="display: none; padding: 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; background: white; cursor: pointer;">
-                            <option value="AM" data-i18n="morning">Morning (AM)</option>
-                            <option value="PM" data-i18n="evening">Evening (PM)</option>
-                        </select>
+                <!-- Time Range Method Fields -->
+                <div id="time-range-fields">
+                    <div class="input-group">
+                        <label data-i18n="start_time">Start Time (24-hour format: HH:MM)</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="manual-start-time" placeholder="08:30" pattern="[0-2][0-9]:[0-5][0-9]" maxlength="5" style="flex: 1;">
+                            <select id="manual-start-period" style="display: none; padding: 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; background: white; cursor: pointer;">
+                                <option value="AM" data-i18n="morning">Morning (AM)</option>
+                                <option value="PM" data-i18n="evening">Evening (PM)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label data-i18n="stop_time">Stop Time (24-hour format: HH:MM)</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="manual-stop-time" placeholder="17:00" pattern="[0-2][0-9]:[0-5][0-9]" maxlength="5" style="flex: 1;">
+                            <select id="manual-stop-period" style="display: none; padding: 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; background: white; cursor: pointer;">
+                                <option value="AM" data-i18n="morning">Morning (AM)</option>
+                                <option value="PM" data-i18n="evening">Evening (PM)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <div class="input-group">
-                    <label data-i18n="stop_time">Stop Time (24-hour format: HH:MM)</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="manual-stop-time" placeholder="17:00" pattern="[0-2][0-9]:[0-5][0-9]" maxlength="5" style="flex: 1;">
-                        <select id="manual-stop-period" style="display: none; padding: 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; background: white; cursor: pointer;">
-                            <option value="AM" data-i18n="morning">Morning (AM)</option>
-                            <option value="PM" data-i18n="evening">Evening (PM)</option>
-                        </select>
+                <!-- Duration Entry Method Fields (hidden by default) -->
+                <div id="duration-fields" style="display: none;">
+                    <div class="input-group">
+                        <label>⏱️ <span data-i18n="work_hours">Work Hours</span></label>
+                        <input type="number" id="manual-duration-hours" placeholder="e.g., 5" min="0" max="23">
+                    </div>
+
+                    <div class="input-group">
+                        <label>⏱️ <span data-i18n="work_minutes">Work Minutes</span></label>
+                        <input type="number" id="manual-duration-minutes" placeholder="e.g., 30" min="0" max="59">
                     </div>
                 </div>
 
@@ -574,7 +606,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.8.4 (FIXED: Admin deletion now removes from worker history too)');
+        console.log('📱 Worker App Version: 4.9.0 (NEW: Duration Entry method in Manual Entry tab)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1474,6 +1506,12 @@
                 reset_price: "Reset to Original",
                 morning: "Morning (AM)",
                 evening: "Evening (PM)",
+                time_range_entry: "Time Range",
+                duration_entry: "Duration Entry",
+                work_date: "Work Date",
+                work_hours: "Work Hours",
+                work_minutes: "Work Minutes",
+                duration_label: "Duration",
                 mark_fully_paid: "Mark as fully paid",
                 client_cannot_pay_more: "(Client cannot pay the remaining amount)",
                 confirm_full_payment: "Client can only pay {amount} MAD?",
@@ -1579,6 +1617,12 @@
                 reset_price: "إعادة تعيين السعر الأصلي",
                 morning: "صباحًا",
                 evening: "مساءً",
+                time_range_entry: "نطاق الوقت",
+                duration_entry: "إدخال المدة",
+                work_date: "تاريخ العمل",
+                work_hours: "ساعات العمل",
+                work_minutes: "دقائق العمل",
+                duration_label: "المدة",
                 mark_fully_paid: "تحديد كمدفوع بالكامل",
                 client_cannot_pay_more: "(الزبون لا يستطيع دفع المبلغ المتبقي)",
                 confirm_full_payment: "الزبون يستطيع دفع {amount} درهم فقط؟",
@@ -1642,6 +1686,17 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             applyLanguage();
+            
+            // Set today's date as default in manual entry
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+            const dateInput = document.getElementById('manual-work-date');
+            if (dateInput) {
+                dateInput.value = todayStr;
+            }
             
             // Initialize submission tab buttons state
             const savedTab = localStorage.getItem('submissionTab') || 'active';
@@ -1872,14 +1927,22 @@
                     ? '<button class="delete-history-btn" onclick="editHistory(' + actualIndex + ')" style="right: 70px; background: #dbeafe; color: #2563eb;">✏️ ' + t('edit') + '</button>' 
                     : '';
                 
-                const timeDisplay = formatTimeDisplay(h.startTime) + ' - ' + formatTimeDisplay(h.endTime);
+                // Check if this is a duration entry
+                let timeDisplay;
+                if (h.entryType === 'duration') {
+                    // Duration entry: show "⏱️ Duration: 5h 30m"
+                    timeDisplay = '⏱️ ' + t('duration_label') + ': ' + formatHM(h.duration);
+                } else {
+                    // Regular time range entry: show "08:30 - 17:00"
+                    timeDisplay = '🕐 ' + formatTimeDisplay(h.startTime) + ' - ' + formatTimeDisplay(h.endTime);
+                }
                 
                 return '<div class="history-item">' +
                     '<button class="delete-history-btn" onclick="deleteHistory(' + actualIndex + ')">' + t('delete') + '</button>' +
                     editBtn +
                     '<div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">' + 
                     date.toLocaleDateString() + '</div>' +
-                    '<div style="font-size: 11px; color: #64748b; margin-bottom: 5px;">🕐 ' + timeDisplay + '</div>' +
+                    '<div style="font-size: 11px; color: #64748b; margin-bottom: 5px;">' + timeDisplay + '</div>' +
                     '<div style="font-size: 13px; color: #64748b; margin-bottom: 3px;">📍 ' + jobSite + '</div>' +
                     '<div style="font-weight: 600; margin-bottom: 8px;">👤 ' + clientName + '</div>' +
                     '<div style="display: flex; justify-content: space-between; font-size: 14px; padding-right: 80px;">' +
@@ -2531,6 +2594,50 @@
         }
 
         let manualCalculation = null;
+        let manualEntryMethod = 'time-range'; // 'time-range' or 'duration'
+
+        function switchManualMethod(method) {
+            manualEntryMethod = method;
+            console.log('🔄 Switched to manual method:', method);
+            
+            const timeRangeBtn = document.getElementById('manual-method-time-range');
+            const durationBtn = document.getElementById('manual-method-duration');
+            const timeRangeFields = document.getElementById('time-range-fields');
+            const durationFields = document.getElementById('duration-fields');
+            
+            if (method === 'time-range') {
+                // Show time range fields, hide duration fields
+                timeRangeFields.style.display = 'block';
+                durationFields.style.display = 'none';
+                
+                // Update button styles
+                timeRangeBtn.style.background = '#2563eb';
+                timeRangeBtn.style.color = 'white';
+                timeRangeBtn.style.borderColor = '#2563eb';
+                
+                durationBtn.style.background = 'white';
+                durationBtn.style.color = '#64748b';
+                durationBtn.style.borderColor = '#e2e8f0';
+            } else {
+                // Show duration fields, hide time range fields
+                timeRangeFields.style.display = 'none';
+                durationFields.style.display = 'block';
+                
+                // Update button styles
+                timeRangeBtn.style.background = 'white';
+                timeRangeBtn.style.color = '#64748b';
+                timeRangeBtn.style.borderColor = '#e2e8f0';
+                
+                durationBtn.style.background = '#2563eb';
+                durationBtn.style.color = 'white';
+                durationBtn.style.borderColor = '#2563eb';
+            }
+            
+            // Clear result display
+            const resultEl = document.getElementById('manual-result');
+            if (resultEl) resultEl.style.display = 'none';
+            manualCalculation = null;
+        }
 
         function renderManualSavedJobs() {
             // Removed: Saved jobs section no longer exists in Manual Entry tab
@@ -2563,13 +2670,31 @@
                 const jobSite = document.getElementById('manual-job-site').value.trim();
                 const clientName = document.getElementById('manual-client-name').value.trim();
                 const rate = parseFloat(document.getElementById('manual-hourly-rate').value);
+                const workDate = document.getElementById('manual-work-date').value;
+
+                console.log('📊 Calculate Manual called (method:', manualEntryMethod + ')');
+                console.log('Common fields:', { jobSite, clientName, rate, workDate });
+
+                // Basic validation
+                if (!jobSite || !clientName || !rate) {
+                    await customAlert('Please fill in Job Site, Client Name, and Hourly Rate!', '⚠️');
+                    return;
+                }
+
+                // Check if manualEntryMethod is 'duration' - use new calculation
+                if (manualEntryMethod === 'duration') {
+                    await calculateDuration(jobSite, clientName, rate, workDate);
+                    return;
+                }
+
+                // Otherwise, use existing time-range calculation
                 let startTime = document.getElementById('manual-start-time').value.trim();
                 let stopTime = document.getElementById('manual-stop-time').value.trim();
 
-                console.log('📊 Calculate Manual called:', { jobSite, clientName, rate, startTime, stopTime });
+                console.log('Time range fields:', { startTime, stopTime });
 
-                if (!jobSite || !clientName || !rate || !startTime || !stopTime) {
-                    await customAlert('Please fill in all fields!', '⚠️');
+                if (!startTime || !stopTime) {
+                    await customAlert('Please fill in start and stop times!', '⚠️');
                     return;
                 }
                 
@@ -2601,12 +2726,17 @@
             }
             console.log('✅ Time validation passed!');
 
-            // Get today's date
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            const dateString = year + '-' + month + '-' + day;
+            // Get date (use work date if provided, otherwise today)
+            let dateString;
+            if (workDate) {
+                dateString = workDate;
+            } else {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                dateString = year + '-' + month + '-' + day;
+            }
 
             console.log('📅 Date string:', dateString);
             console.log('⏰ Times after conversion:', { startTime, stopTime });
@@ -2662,6 +2792,86 @@
                 console.error('❌ ERROR IN CALCULATE MANUAL:', error);
                 console.error('❌ Error message:', error.message);
                 console.error('❌ Error stack:', error.stack);
+                await customAlert(`Calculation error: ${error.message}`, '❌');
+            }
+        }
+
+        // Calculate payment using duration entry method (hours + minutes)
+        async function calculateDuration(jobSite, clientName, rate, workDate) {
+            try {
+                const hours = parseInt(document.getElementById('manual-duration-hours').value) || 0;
+                const minutes = parseInt(document.getElementById('manual-duration-minutes').value) || 0;
+
+                console.log('⏱️ Duration entry:', { hours, minutes });
+
+                if (hours === 0 && minutes === 0) {
+                    await customAlert('Please enter at least some hours or minutes!', '⚠️');
+                    return;
+                }
+
+                if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+                    await customAlert('Invalid hours or minutes!\nHours: 0-23, Minutes: 0-59', '⚠️');
+                    return;
+                }
+
+                // Calculate total duration in seconds
+                const durationSeconds = (hours * 3600) + (minutes * 60);
+
+                // Calculate payment
+                const payment = calculatePayment(durationSeconds, rate);
+
+                // Get date (use work date if provided, otherwise today)
+                let dateString;
+                if (workDate) {
+                    dateString = workDate;
+                } else {
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                    const day = String(today.getDate()).padStart(2, '0');
+                    dateString = year + '-' + month + '-' + day;
+                }
+
+                const workDateTime = new Date(dateString + 'T12:00:00'); // Use noon as placeholder
+
+                console.log('✅ Duration calculation:', { durationSeconds, payment, dateString });
+
+                // Store calculation result
+                manualCalculation = {
+                    jobSite: jobSite,
+                    clientName: clientName,
+                    rate: rate,
+                    duration: durationSeconds,
+                    payment: payment,
+                    entryType: 'duration', // 🔥 Mark as duration entry
+                    hours: hours,
+                    minutes: minutes,
+                    startTime: null, // No start time for duration entry
+                    endTime: workDateTime.toISOString(), // Use work date as reference
+                    workDate: dateString,
+                    sent: false
+                };
+
+                // Display result
+                const durationEl = document.getElementById('manual-duration');
+                const paymentEl = document.getElementById('manual-payment');
+                const resultEl = document.getElementById('manual-result');
+
+                if (durationEl) durationEl.textContent = formatHM(durationSeconds);
+                if (paymentEl) paymentEl.textContent = payment + ' MAD';
+                if (resultEl) resultEl.style.display = 'block';
+
+                console.log('✅ Duration entry result displayed!');
+
+                // Save job if it's new
+                const data = loadData();
+                if (!data.jobs.find(j => j.jobSite === jobSite && j.clientName === clientName)) {
+                    data.jobs.push({ jobSite: jobSite, clientName: clientName, rate: rate });
+                    saveData(data);
+                    renderManualSavedJobs();
+                }
+            } catch (error) {
+                console.error('❌ ERROR IN CALCULATE DURATION:', error);
                 await customAlert(`Calculation error: ${error.message}`, '❌');
             }
         }
