@@ -606,7 +606,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.9.0 (NEW: Duration Entry method in Manual Entry tab)');
+        console.log('📱 Worker App Version: 4.9.1 (FIXED: Time Range saving with timestamp)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2766,7 +2766,10 @@
                 startTime: start.toISOString(),
                 endTime: stop.toISOString(),
                 duration: durationSeconds,
-                payment: payment
+                payment: payment,
+                entryType: 'time-range', // 🔥 Mark as time-range entry
+                sent: false,
+                timestamp: Date.now()
             };
 
             console.log('✅ Setting result display...');
@@ -2849,7 +2852,8 @@
                     startTime: null, // No start time for duration entry
                     endTime: workDateTime.toISOString(), // Use work date as reference
                     workDate: dateString,
-                    sent: false
+                    sent: false,
+                    timestamp: Date.now()
                 };
 
                 // Display result
