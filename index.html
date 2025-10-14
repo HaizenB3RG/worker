@@ -606,7 +606,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 5.0.2 (FIXED: Handle case when ALL submissions deleted from Firebase)');
+        console.log('📱 Worker App Version: 5.1.0 (CRITICAL FIX: Prevent re-creating deleted submissions when syncing payments)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -3268,6 +3268,31 @@
                 
                 if (firebaseKey) {
                     const submissionRef = window.firebaseRef(window.firebaseDB, 'submissions/' + firebaseKey);
+                    
+                    // 🔥 CRITICAL: Check if submission still exists in Firebase before updating!
+                    const snapshot = await window.firebaseGet(submissionRef);
+                    if (!snapshot.exists()) {
+                        console.warn('⚠️ Submission no longer exists in Firebase (admin may have deleted it)');
+                        console.warn('   Removing from local storage...');
+                        
+                        // Remove from local storage
+                        const data = loadData();
+                        data.submissions = data.submissions.filter(s => s.timestamp !== submission.timestamp);
+                        
+                        // Also remove sessions from history
+                        if (submission.sessions && Array.isArray(submission.sessions)) {
+                            const sessionTimestamps = submission.sessions.map(s => s.endTime);
+                            data.history = data.history.filter(h => !sessionTimestamps.includes(h.endTime));
+                        }
+                        
+                        saveData(data);
+                        renderSubmissionHistory();
+                        renderHistory();
+                        
+                        await customAlert('⚠️ This submission was deleted by admin. It has been removed from your app.', '⚠️');
+                        return;
+                    }
+                    
                     const updateData = {
                         payments: submission.payments,
                         totalPaid: submission.totalPaid,
