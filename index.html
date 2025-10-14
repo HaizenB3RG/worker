@@ -606,7 +606,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 5.0.1 (DEBUG: Added detailed deletion detection logging)');
+        console.log('📱 Worker App Version: 5.0.2 (FIXED: Handle case when ALL submissions deleted from Firebase)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1347,6 +1347,43 @@
                     
                     // Update local submissions
                     if (!data.submissions) data.submissions = [];
+                    
+                    // 🔥 CRITICAL: If Firebase has 0 submissions for this worker but we have local ones, they were ALL deleted!
+                    if (firebaseSubmissions.length === 0 && data.submissions.length > 0) {
+                        console.log('⚠️ CRITICAL: Firebase has 0 submissions but local has', data.submissions.length, '- they were deleted!');
+                        const allDeletedSessions = [];
+                        data.submissions.forEach(sub => {
+                            console.log('🗑️ Marking submission for deletion:', sub.timestamp);
+                            if (sub.sessions && Array.isArray(sub.sessions)) {
+                                sub.sessions.forEach(session => {
+                                    if (session.endTime) {
+                                        allDeletedSessions.push(session.endTime);
+                                    }
+                                });
+                            }
+                        });
+                        
+                        // Clear all submissions
+                        data.submissions = [];
+                        
+                        // Remove all sessions from history
+                        if (allDeletedSessions.length > 0) {
+                            const historyBefore = data.history.length;
+                            data.history = data.history.filter(h => 
+                                !allDeletedSessions.includes(h.endTime)
+                            );
+                            const historyAfter = data.history.length;
+                            console.log(`🗑️ Removed ${historyBefore - historyAfter} sessions from history (all submissions deleted)`);
+                        }
+                        
+                        saveData(data);
+                        renderSubmissionHistory();
+                        renderHistory();
+                        updateSubmitSummary();
+                        updateTodaySummary();
+                        console.log('✅ All submissions cleared from worker app');
+                        return; // Exit early, no need to continue processing
+                    }
                     
                     const localTimestamps = data.submissions.map(s => s.timestamp);
                     let addedSubs = 0;
