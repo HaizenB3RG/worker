@@ -574,7 +574,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.8.1 (Remove clear button - only admin can delete completed)');
+        console.log('📱 Worker App Version: 4.8.2 (FIXED: Detect deleted submissions from Firebase and sync removal)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1295,13 +1295,33 @@
                         }
                     });
                     
-                    if (addedSubs > 0 || updatedSubs > 0) {
+                    // ========================================
+                    // 🗑️ DETECT DELETIONS (Admin deleted from Firebase)
+                    // ========================================
+                    const firebaseTimestamps = firebaseSubmissions.map(s => s.timestamp);
+                    const deletedSubs = data.submissions.filter(localSub => 
+                        !firebaseTimestamps.includes(localSub.timestamp)
+                    );
+                    
+                    if (deletedSubs.length > 0) {
+                        console.log(`🗑️ Detected ${deletedSubs.length} deleted submissions from Firebase`);
+                        deletedSubs.forEach(deleted => {
+                            console.log('🗑️ Removing deleted submission:', deleted.timestamp);
+                        });
+                        
+                        // Remove deleted submissions from local data
+                        data.submissions = data.submissions.filter(localSub => 
+                            firebaseTimestamps.includes(localSub.timestamp)
+                        );
+                    }
+                    
+                    if (addedSubs > 0 || updatedSubs > 0 || deletedSubs.length > 0) {
                         saveData(data);
                         renderSubmissionHistory();
                         renderHistory(); // 🔥 Update History tab too!
                         updateSubmitSummary();
                         updateTodaySummary();
-                        console.log(`✅ Submissions synced: +${addedSubs} added, ${updatedSubs} updated`);
+                        console.log(`✅ Submissions synced: +${addedSubs} added, ${updatedSubs} updated, -${deletedSubs.length} deleted`);
                     }
                 }
             });
