@@ -606,7 +606,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 5.1.0 (CRITICAL FIX: Prevent re-creating deleted submissions when syncing payments)');
+        console.log('📱 Worker App Version: 5.1.1 (CRITICAL FIX: Handle Firebase empty state when ALL submissions deleted)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1494,6 +1494,50 @@
                     
                     // 🔥 ALWAYS update History tab (includes unsent sessions from manual entry)
                     renderHistory();
+                } else {
+                    // ========================================
+                    // 🔥 NO SUBMISSIONS IN FIREBASE AT ALL
+                    // ========================================
+                    console.log('📭 No submissions in Firebase (for ANY worker)');
+                    const data = loadData();
+                    
+                    if (data.submissions && data.submissions.length > 0) {
+                        console.log('⚠️ CRITICAL: Worker has', data.submissions.length, 'submissions locally but Firebase has NONE');
+                        console.log('   This means ALL submissions were deleted by admin!');
+                        
+                        // Collect all session timestamps before clearing
+                        const allSessionTimestamps = [];
+                        data.submissions.forEach(sub => {
+                            console.log('🗑️ Removing submission from localStorage:', sub.timestamp);
+                            if (sub.sessions && Array.isArray(sub.sessions)) {
+                                sub.sessions.forEach(session => {
+                                    if (session.endTime) {
+                                        allSessionTimestamps.push(session.endTime);
+                                    }
+                                });
+                            }
+                        });
+                        
+                        // Clear all submissions
+                        data.submissions = [];
+                        
+                        // Remove all submitted sessions from history
+                        if (allSessionTimestamps.length > 0) {
+                            const historyBefore = data.history.length;
+                            data.history = data.history.filter(h => 
+                                !allSessionTimestamps.includes(h.endTime)
+                            );
+                            const historyAfter = data.history.length;
+                            console.log(`🗑️ Removed ${historyBefore - historyAfter} sessions from history (all deleted by admin)`);
+                        }
+                        
+                        saveData(data);
+                        renderSubmissionHistory();
+                        renderHistory();
+                        updateSubmitSummary();
+                        updateTodaySummary();
+                        console.log('✅ All submissions cleared from worker (deleted by admin)');
+                    }
                 }
             });
         } // End of initApp()
