@@ -366,7 +366,7 @@
                 <div id="submission-history" style="margin-top: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="color: #1e293b; margin: 0;" data-i18n="submission_history">📋 Submission History</h3>
-                        <button class="btn" style="background: #dc2626; color: white; padding: 10px 16px; width: auto; font-size: 13px; font-weight: 600;" onclick="clearSubmissionHistory()" data-i18n="clear_submission_history">🗑️ Clear Submission History</button>
+                        <div style="font-size: 12px; color: #64748b; font-style: italic;">ℹ️ Admin can delete completed submissions</div>
                     </div>
                     
                     <!-- Toggle Tabs: Active vs Completed -->
@@ -574,7 +574,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.8.0 (Submission tabs: Active vs Completed)');
+        console.log('📱 Worker App Version: 4.8.1 (Remove clear button - only admin can delete completed)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
