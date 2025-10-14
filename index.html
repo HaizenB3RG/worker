@@ -606,7 +606,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 5.0.0 (CRITICAL FIX: Anti-deletion protection with 30s grace period + pending saves tracking)');
+        console.log('📱 Worker App Version: 5.0.1 (DEBUG: Added detailed deletion detection logging)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1402,10 +1402,16 @@
                     // ========================================
                     // 🗑️ DETECT DELETIONS (Admin deleted from Firebase)
                     // ========================================
+                    console.log('🔍 Checking for deletions...');
+                    console.log('Firebase timestamps:', firebaseSubmissions.map(s => s.timestamp));
+                    console.log('Local timestamps:', data.submissions.map(s => s.timestamp));
+                    
                     const firebaseTimestamps = firebaseSubmissions.map(s => s.timestamp);
                     const deletedSubs = data.submissions.filter(localSub => 
                         !firebaseTimestamps.includes(localSub.timestamp)
                     );
+                    
+                    console.log('🗑️ Deleted submissions count:', deletedSubs.length);
                     
                     if (deletedSubs.length > 0) {
                         console.log(`🗑️ Detected ${deletedSubs.length} deleted submissions from Firebase`);
