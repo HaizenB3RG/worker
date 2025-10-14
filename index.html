@@ -606,7 +606,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 4.9.1 (FIXED: Time Range saving with timestamp)');
+        console.log('📱 Worker App Version: 5.0.0 (CRITICAL FIX: Anti-deletion protection with 30s grace period + pending saves tracking)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -954,6 +954,10 @@
         let isSyncing = false;
         let syncIndicator = null;
         
+        // 🔥 Track pending Firebase saves to prevent premature deletion
+        const pendingSaves = new Set(); // Stores timestamps of sessions being saved
+        const GRACE_PERIOD_MS = 30000; // 30 seconds grace period
+        
         // Get worker name for drafts path
         function getWorkerName() {
             const data = loadData();
@@ -966,6 +970,11 @@
                 isSyncing = true;
                 showSyncIndicator('syncing');
                 
+                // 🔥 Mark this session as pending save
+                pendingSaves.add(session.timestamp);
+                console.log('🔄 Marking session as pending save:', session.timestamp);
+                console.log('📋 Current pending saves:', Array.from(pendingSaves));
+                
                 const workerName = getWorkerName();
                 const draftRef = ref(database, `drafts/${workerName}/${session.timestamp}`);
                 
@@ -977,12 +986,22 @@
                 });
                 
                 console.log('☁️ Draft saved to Firebase:', session.timestamp);
+                
+                // 🔥 Remove from pending saves after successful save
+                pendingSaves.delete(session.timestamp);
+                console.log('✅ Session confirmed saved, removed from pending:', session.timestamp);
+                console.log('📋 Remaining pending saves:', Array.from(pendingSaves));
+                
                 showSyncIndicator('synced');
                 isSyncing = false;
                 
                 return true;
             } catch (error) {
                 console.error('❌ Failed to save draft to Firebase:', error);
+                
+                // 🔥 Keep in pending saves on error (will retry or delete later)
+                console.warn('⚠️ Session still in pending saves due to error:', session.timestamp);
+                
                 showSyncIndicator('error');
                 isSyncing = false;
                 return false;
@@ -1196,9 +1215,10 @@
             console.log('👂 Setting up real-time listener for drafts...');
             
             onValue(draftsRef, (snapshot) => {
-                console.log('🔥 Firebase drafts changed!');
-                
-                if (snapshot.exists()) {
+                try {
+                    console.log('🔥 Firebase drafts changed!');
+                    
+                    if (snapshot.exists()) {
                     const firebaseDrafts = snapshot.val();
                     const draftsArray = Object.values(firebaseDrafts);
                     console.log(`☁️ Firebase has ${draftsArray.length} drafts`);
@@ -1219,9 +1239,25 @@
                     
                     // Remove local drafts that don't exist in Firebase (were submitted on another device)
                     const firebaseTimestamps = draftsArray.map(d => d.timestamp);
+                    const now = Date.now();
+                    
                     data.history = data.history.filter(h => {
                         if (h.sent === false && !firebaseTimestamps.includes(h.timestamp)) {
-                            console.log('➖ Removing draft (submitted on another device):', h.timestamp);
+                            // 🔥 SAFETY CHECK 1: Is this session pending save?
+                            if (pendingSaves.has(h.timestamp)) {
+                                console.log('⚠️ SKIPPING deletion - session is pending save:', h.timestamp);
+                                return true; // Keep it!
+                            }
+                            
+                            // 🔥 SAFETY CHECK 2: Was this session created < 30 seconds ago?
+                            const ageMs = now - h.timestamp;
+                            if (ageMs < GRACE_PERIOD_MS) {
+                                console.log(`⚠️ SKIPPING deletion - session too recent (${Math.floor(ageMs/1000)}s old):`, h.timestamp);
+                                return true; // Keep it!
+                            }
+                            
+                            // Safe to delete - it's old and not pending
+                            console.log(`➖ Removing draft (submitted on another device, ${Math.floor(ageMs/1000)}s old):`, h.timestamp);
                             removed++;
                             return false;
                         }
@@ -1236,19 +1272,55 @@
                         console.log(`✅ Synced: +${added} added, -${removed} removed`);
                     }
                 } else {
-                    // No drafts in Firebase - remove all unsent sessions locally
+                    // No drafts in Firebase - but be VERY careful before deleting!
                     console.log('📭 No drafts in Firebase');
                     const data = loadData();
-                    const beforeCount = data.history.filter(h => h.sent === false).length;
+                    const now = Date.now();
+                    let removed = 0;
                     
-                    if (beforeCount > 0) {
-                        data.history = data.history.filter(h => h.sent !== false);
+                    // 🔥 CRITICAL: Only delete sessions that pass ALL safety checks
+                    data.history = data.history.filter(h => {
+                        if (h.sent === false) {
+                            // SAFETY CHECK 1: Is this session pending save?
+                            if (pendingSaves.has(h.timestamp)) {
+                                console.log('⚠️ KEEPING session - pending save:', h.timestamp);
+                                return true; // Keep it!
+                            }
+                            
+                            // SAFETY CHECK 2: Was this session created < 30 seconds ago?
+                            const ageMs = now - h.timestamp;
+                            if (ageMs < GRACE_PERIOD_MS) {
+                                console.log(`⚠️ KEEPING session - too recent (${Math.floor(ageMs/1000)}s old):`, h.timestamp);
+                                return true; // Keep it!
+                            }
+                            
+                            // SAFETY CHECK 3: Has enough time passed for Firebase to sync?
+                            // If Firebase is empty but we have recent sessions, it might be a sync delay
+                            if (ageMs < GRACE_PERIOD_MS * 2) { // Give extra time (60s)
+                                console.log(`⚠️ KEEPING session - Firebase might be syncing (${Math.floor(ageMs/1000)}s old):`, h.timestamp);
+                                return true; // Keep it!
+                            }
+                            
+                            // Safe to delete - it's very old and confirmed not in Firebase
+                            console.log(`➖ Removing old draft (${Math.floor(ageMs/1000)}s old):`, h.timestamp);
+                            removed++;
+                            return false;
+                        }
+                        return true; // Keep sent sessions
+                    });
+                    
+                    if (removed > 0) {
                         saveData(data);
                         renderHistory();
                         updateSubmitSummary();
                         updateTodaySummary();
-                        console.log(`✅ Removed ${beforeCount} unsent sessions (submitted on another device)`);
+                        console.log(`✅ Removed ${removed} old unsent sessions`);
                     }
+                }
+                } catch (error) {
+                    console.error('❌ Error in drafts listener:', error);
+                    console.error('Stack:', error.stack);
+                    // Don't crash the app - just log the error
                 }
             });
             
