@@ -258,6 +258,20 @@
                     </div>
                 </div>
             </div>
+
+            <div class="card today-summary" style="margin-top: 15px;">
+                <h3 data-i18n="total_all_summary">📈 Total ALL Sessions</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="value" id="total-hours">0h 0m</div>
+                        <div style="font-size: 12px; opacity: 0.8;" data-i18n="total_time">Total Time</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="value" id="total-payment">0 MAD</div>
+                        <div style="font-size: 12px; opacity: 0.8;" data-i18n="total_payment">Total Payment</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="manual-view" class="view">
@@ -606,7 +620,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 5.1.2 (FIX: Show ALL unsent sessions, not just today\'s)');
+        console.log('📱 Worker App Version: 5.2.0 (NEW: Total ALL Sessions summary + Show ALL unsent sessions in submit list)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1185,6 +1199,7 @@
                     renderHistory();
                     updateSubmitSummary();
                     updateTodaySummary();
+                    updateTotalSummary();
                     
                     console.log(`✅ Cleaned ${corruptedSessions.length} local sessions and ${cleaned} Firebase submissions`);
                 }
@@ -1269,6 +1284,7 @@
                         renderHistory();
                         updateSubmitSummary();
                         updateTodaySummary();
+                    updateTotalSummary();
                         console.log(`✅ Synced: +${added} added, -${removed} removed`);
                     }
                 } else {
@@ -1314,6 +1330,7 @@
                         renderHistory();
                         updateSubmitSummary();
                         updateTodaySummary();
+                    updateTotalSummary();
                         console.log(`✅ Removed ${removed} old unsent sessions`);
                     }
                 }
@@ -1381,6 +1398,7 @@
                         renderHistory();
                         updateSubmitSummary();
                         updateTodaySummary();
+                    updateTotalSummary();
                         console.log('✅ All submissions cleared from worker app');
                         return; // Exit early, no need to continue processing
                     }
@@ -1489,6 +1507,7 @@
                         renderSubmissionHistory();
                         updateSubmitSummary();
                         updateTodaySummary();
+                    updateTotalSummary();
                         console.log(`✅ Submissions synced: +${addedSubs} added, ${updatedSubs} updated, -${deletedSubs.length} deleted`);
                     }
                     
@@ -1536,6 +1555,7 @@
                         renderHistory();
                         updateSubmitSummary();
                         updateTodaySummary();
+                    updateTotalSummary();
                         console.log('✅ All submissions cleared from worker (deleted by admin)');
                     }
                 }
@@ -1613,6 +1633,7 @@
                 duration: "Duration",
                 payment: "Payment",
                 today_summary: "📊 Today's Summary",
+                total_all_summary: "📈 Total ALL Sessions",
                 total_time: "Total Time",
                 total_payment: "Total Payment",
                 manual_entry_title: "📝 Manual Time Entry",
@@ -1839,6 +1860,7 @@
             if (typeof renderHistory === 'function') renderHistory();
             if (typeof renderSubmissionHistory === 'function') renderSubmissionHistory();
             if (typeof updateTodaySummary === 'function') updateTodaySummary();
+            if (typeof updateTotalSummary === 'function') updateTotalSummary();
             
             console.log('🌐 Language changed to:', currentLang);
         }
@@ -2026,6 +2048,7 @@
             currentJob = null;
             elapsedTime = 0;
             updateTodaySummary();
+            updateTotalSummary();
             renderSavedJobs();
         }
 
@@ -2047,6 +2070,16 @@
             const totalPayment = todaySessions.reduce((sum, h) => sum + parseFloat(h.payment), 0);
             document.getElementById('today-hours').textContent = formatHM(totalSeconds);
             document.getElementById('today-payment').textContent = totalPayment.toFixed(2) + ' MAD';
+        }
+
+        function updateTotalSummary() {
+            const data = loadData();
+            // Show ALL sessions (from all time)
+            const allSessions = data.history;
+            const totalSeconds = allSessions.reduce((sum, h) => sum + h.duration, 0);
+            const totalPayment = allSessions.reduce((sum, h) => sum + parseFloat(h.payment), 0);
+            document.getElementById('total-hours').textContent = formatHM(totalSeconds);
+            document.getElementById('total-payment').textContent = totalPayment.toFixed(2) + ' MAD';
         }
 
         function renderSavedJobs() {
@@ -2137,6 +2170,7 @@
             
             renderHistory();
             updateTodaySummary();
+            updateTotalSummary();
             
             console.log('✅ Session deleted successfully');
         }
@@ -2168,6 +2202,7 @@
             
             renderHistory();
             updateTodaySummary();
+            updateTotalSummary();
             updateSubmitSummary();
             
             await customAlert(`✅ Cleared ${unsentCount} unsent session(s)!`, '✅');
@@ -2333,6 +2368,8 @@
             // Update UI
             renderHistory();
             updateTodaySummary();
+            updateTotalSummary();
+            updateTotalSummary();
             renderSavedJobs();
             
             await customAlert('✅ All history cleared!', '✅');
@@ -3095,6 +3132,7 @@
             manualCalculation = null;
 
             updateTodaySummary();
+            updateTotalSummary();
             renderManualSavedJobs();
         }
 
@@ -3646,6 +3684,7 @@
             // Update UI
             renderHistory();
             updateTodaySummary();
+            updateTotalSummary();
             updateSubmitSummary();
             
             // Close modal
