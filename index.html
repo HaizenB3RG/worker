@@ -620,7 +620,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 5.2.1 (CRITICAL FIX: Don\'t delete duration entries as corrupted)');
+        console.log('📱 Worker App Version: 5.2.2 (FIX: Submit ALL unsent sessions, not just today\'s)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -2500,13 +2500,8 @@
                 return;
             }
 
-            const today = new Date().toDateString();
-            console.log('Today:', today);
-            
-            // Get only unsent sessions from today
-            const unsentSessions = data.history.filter(h => 
-                new Date(h.endTime).toDateString() === today && h.sent === false
-            );
+            // Get ALL unsent sessions (regardless of date)
+            const unsentSessions = data.history.filter(h => h.sent === false);
 
             console.log('Unsent sessions found:', unsentSessions);
 
