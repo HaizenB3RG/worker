@@ -620,7 +620,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 5.2.0 (NEW: Total ALL Sessions summary + Show ALL unsent sessions in submit list)');
+        console.log('📱 Worker App Version: 5.2.1 (CRITICAL FIX: Don\'t delete duration entries as corrupted)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -1149,9 +1149,12 @@
                 
                 // Find corrupted sessions (NaN, undefined, Invalid Date)
                 const corruptedSessions = data.history.filter(h => {
+                    // Duration entries don't have startTime, so check entryType first
+                    const isDuration = h.entryType === 'duration';
+                    
                     const isCorrupted = 
                         !h.endTime || 
-                        !h.startTime || 
+                        (!isDuration && !h.startTime) ||  // Only check startTime for non-duration entries
                         isNaN(new Date(h.endTime).getTime()) ||
                         isNaN(h.duration) ||
                         h.payment === undefined ||
