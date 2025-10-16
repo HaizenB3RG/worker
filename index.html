@@ -620,7 +620,7 @@
         window.firebaseAuth = auth;
 
         console.log('🔥 Firebase initialized in worker app!');
-        console.log('📱 Worker App Version: 5.2.2 (FIX: Submit ALL unsent sessions, not just today\'s)');
+        console.log('📱 Worker App Version: 5.2.3 (FIX: Allow any hours in Duration Entry, not just 0-23)');
         console.log('🕐 Loaded at:', new Date().toLocaleString());
 
         // ========================================
@@ -3003,8 +3003,9 @@
                     return;
                 }
 
-                if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-                    await customAlert('Invalid hours or minutes!\nHours: 0-23, Minutes: 0-59', '⚠️');
+                // Allow any positive hours (for total work duration), minutes must be 0-59
+                if (hours < 0 || minutes < 0 || minutes > 59) {
+                    await customAlert('Invalid hours or minutes!\nHours: must be positive, Minutes: 0-59', '⚠️');
                     return;
                 }
 
