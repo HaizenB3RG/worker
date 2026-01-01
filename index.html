@@ -1969,6 +1969,15 @@
             return h + 'h ' + m + 'm';
         }
 
+        // Format date as DD/MM/YYYY
+        function formatDate(date) {
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return day + '/' + month + '/' + year;
+        }
+
         function calculatePayment(seconds, rate) {
             const payment = (seconds / 3600) * rate;
             return Math.floor(payment).toFixed(2); // Round DOWN to remove decimals
@@ -2815,8 +2824,8 @@
                 
                 return '<div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid ' + statusColor + ';">' +
                     '<div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">' + 
-                    '📅 Work: ' + workDate.toLocaleDateString() + 
-                    ' | 📤 Submitted: ' + submissionDate.toLocaleDateString() + ' at ' + submissionDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</div>' +
+                    '📅 Work: ' + formatDate(workDate) + 
+                    ' | 📤 Submitted: ' + formatDate(submissionDate) + ' at ' + submissionDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</div>' +
                     
                     '<div style="font-size: 13px; color: #64748b; margin-bottom: 3px;">📍 ' + jobSites + '</div>' +
                     '<div style="font-weight: 600; font-size: 16px; color: #2563eb; margin-bottom: 8px;">👤 ' + clientName + '</div>' +
