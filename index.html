@@ -415,6 +415,26 @@
                         <div style="font-size: 12px; color: #64748b; font-style: italic;">ℹ️ Admin can delete completed submissions</div>
                     </div>
                     
+                    <!-- Search Bar -->
+                    <div style="margin-bottom: 15px; position: relative;">
+                        <input 
+                            type="text" 
+                            id="submission-search" 
+                            placeholder="🔍 Search by client name..." 
+                            oninput="filterSubmissions()"
+                            style="width: 100%; padding: 12px 40px 12px 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; outline: none; transition: border-color 0.3s;"
+                            onfocus="this.style.borderColor='#2563eb'"
+                            onblur="this.style.borderColor='#e2e8f0'"
+                        />
+                        <button 
+                            id="clear-search-btn"
+                            onclick="clearSearch()"
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; font-size: 18px; color: #94a3b8; cursor: pointer; display: none; padding: 5px;"
+                            onmouseover="this.style.color='#ef4444'"
+                            onmouseout="this.style.color='#94a3b8'"
+                        >✕</button>
+                    </div>
+                    
                     <!-- Toggle Tabs: Active vs Completed -->
                     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                         <button id="submission-tab-active" onclick="switchSubmissionTab('active')" style="flex: 1; padding: 12px; border: 2px solid #2563eb; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: #2563eb; color: white;">
@@ -2644,6 +2664,37 @@
             renderSubmissionHistory();
         }
 
+        // ========================================
+        // 🔍 SEARCH FUNCTIONALITY
+        // ========================================
+        
+        function filterSubmissions() {
+            const searchInput = document.getElementById('submission-search');
+            const clearBtn = document.getElementById('clear-search-btn');
+            const searchTerm = searchInput.value.trim();
+            
+            // Show/hide clear button
+            if (searchTerm.length > 0) {
+                clearBtn.style.display = 'block';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+            
+            // Re-render with search filter
+            renderSubmissionHistory();
+        }
+        
+        function clearSearch() {
+            const searchInput = document.getElementById('submission-search');
+            const clearBtn = document.getElementById('clear-search-btn');
+            
+            searchInput.value = '';
+            clearBtn.style.display = 'none';
+            
+            // Re-render without filter
+            renderSubmissionHistory();
+        }
+
         function renderSubmissionHistory() {
             const data = loadData();
             const submissions = data.submissions || [];
@@ -2664,13 +2715,29 @@
             // Filter based on current tab
             const filteredSubmissions = submissionTab === 'active' ? activeSubmissions : completedSubmissions;
 
-            if (filteredSubmissions.length === 0) {
-                const emptyMessage = submissionTab === 'active' ? t('no_active_submissions') : t('no_completed_submissions');
-                container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 20px;">' + emptyMessage + '</p>';
+            // Apply search filter
+            const searchInput = document.getElementById('submission-search');
+            const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            
+            let searchFiltered = filteredSubmissions;
+            if (searchTerm.length > 0) {
+                searchFiltered = filteredSubmissions.filter(s => {
+                    const clientName = s.clientName || (s.sessions && s.sessions[0] ? (s.sessions[0].clientName || s.sessions[0].job) : '');
+                    return clientName.toLowerCase().includes(searchTerm);
+                });
+            }
+
+            if (searchFiltered.length === 0) {
+                if (searchTerm.length > 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 20px;">🔍 No results found for "' + searchTerm + '"</p>';
+                } else {
+                    const emptyMessage = submissionTab === 'active' ? t('no_active_submissions') : t('no_completed_submissions');
+                    container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 20px;">' + emptyMessage + '</p>';
+                }
                 return;
             }
 
-            const sorted = [...filteredSubmissions].sort((a, b) => b.timestamp - a.timestamp);
+            const sorted = [...searchFiltered].sort((a, b) => b.timestamp - a.timestamp);
             container.innerHTML = sorted.map((s, index) => {
                 const date = new Date(s.date);
                 const status = s.status || 'pending';
