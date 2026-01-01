@@ -190,6 +190,16 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        @keyframes pulse {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+                border-color: #dc2626;
+            }
+            50% { 
+                box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+                border-color: #ef4444;
+            }
+        }
     </style>
 </head>
 <body>
@@ -414,6 +424,9 @@
                         <h3 style="color: #1e293b; margin: 0;" data-i18n="submission_history">📋 Submission History</h3>
                         <div style="font-size: 12px; color: #64748b; font-style: italic;">ℹ️ Admin can delete completed submissions</div>
                     </div>
+                    
+                    <!-- Unpaid Summary Alert -->
+                    <div id="unpaid-alert" style="display: none; margin-bottom: 20px;"></div>
                     
                     <!-- Search Bar -->
                     <div style="margin-bottom: 15px; position: relative;">
@@ -2710,10 +2723,109 @@
             renderSubmissionHistory();
         }
 
+        // ========================================
+        // 💰 UNPAID SUMMARY ALERT
+        // ========================================
+        
+        function renderUnpaidAlert() {
+            const data = loadData();
+            const submissions = data.submissions || [];
+            const alertContainer = document.getElementById('unpaid-alert');
+            
+            if (!alertContainer) return;
+            
+            // Calculate unpaid totals
+            let totalUnpaid = 0;
+            let submissionCount = 0;
+            
+            submissions.forEach(sub => {
+                if (sub.paymentStatus !== 'fully_paid') {
+                    const totalAmount = parseFloat(sub.totalPayment);
+                    const totalPaid = parseFloat(sub.totalPaid || 0);
+                    const remaining = totalAmount - totalPaid;
+                    totalUnpaid += remaining;
+                    submissionCount++;
+                }
+            });
+            
+            // Hide alert if no unpaid submissions
+            if (submissionCount === 0 || totalUnpaid === 0) {
+                alertContainer.style.display = 'none';
+                return;
+            }
+            
+            // Determine alert level and styling
+            let icon, title, bgColor, textColor, borderColor, animation;
+            
+            if (totalUnpaid > 10000) {
+                // 🔴 CRITICAL (Over 10,000 MAD)
+                icon = '🚨';
+                title = 'CRITICAL UNPAID AMOUNT';
+                bgColor = '#fee2e2';
+                textColor = '#991b1b';
+                borderColor = '#dc2626';
+                animation = 'pulse 2s infinite';
+            } else if (totalUnpaid > 6000) {
+                // 🟠 HIGH (6,000 - 10,000 MAD)
+                icon = '⚠️';
+                title = 'HIGH UNPAID AMOUNT';
+                bgColor = '#fed7aa';
+                textColor = '#9a3412';
+                borderColor = '#ea580c';
+                animation = 'none';
+            } else if (totalUnpaid > 2000) {
+                // 🟡 MEDIUM (2,000 - 6,000 MAD)
+                icon = '⚠️';
+                title = 'PENDING PAYMENTS';
+                bgColor = '#fef3c7';
+                textColor = '#92400e';
+                borderColor = '#f59e0b';
+                animation = 'none';
+            } else {
+                // 🟢 LOW (Under 2,000 MAD)
+                icon = 'ℹ️';
+                title = 'PENDING PAYMENTS';
+                bgColor = '#dbeafe';
+                textColor = '#1e40af';
+                borderColor = '#3b82f6';
+                animation = 'none';
+            }
+            
+            // Render alert
+            alertContainer.innerHTML = `
+                <div style="
+                    background: ${bgColor}; 
+                    padding: 20px; 
+                    border-radius: 12px; 
+                    border: 3px solid ${borderColor}; 
+                    text-align: center;
+                    animation: ${animation};
+                ">
+                    <div style="font-size: 18px; font-weight: 700; color: ${textColor}; margin-bottom: 10px;">
+                        ${icon} ${title}
+                    </div>
+                    <div style="font-size: 14px; color: ${textColor}; margin-bottom: 15px;">
+                        You have unpaid work worth:
+                    </div>
+                    <div style="font-size: 32px; font-weight: 800; color: ${textColor}; margin-bottom: 15px;">
+                        💰 ${totalUnpaid.toFixed(2)} MAD
+                    </div>
+                    <div style="font-size: 14px; color: ${textColor};">
+                        ${submissionCount} submission${submissionCount > 1 ? 's' : ''} waiting for payment
+                    </div>
+                </div>
+            `;
+            
+            alertContainer.style.display = 'block';
+        }
+
         function renderSubmissionHistory() {
             const data = loadData();
             const submissions = data.submissions || [];
             const container = document.getElementById('submission-list');
+            
+            // Update unpaid alert
+            renderUnpaidAlert();
 
             console.log('Rendering submissions:', submissions); // Debug
 
