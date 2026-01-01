@@ -1737,7 +1737,15 @@
                 clear_unsent_sessions: "Clear Unsent Sessions",
                 clear_submission_history: "Clear Submission History",
                 confirm_clear_unsent: "Delete all unsent work sessions? This cannot be undone!",
-                confirm_clear_submissions: "⚠️ WARNING: Delete ALL submission history?\n\nThis will permanently delete:\n• All submitted sessions\n• All payment records\n• All work history\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?"
+                confirm_clear_submissions: "⚠️ WARNING: Delete ALL submission history?\n\nThis will permanently delete:\n• All submitted sessions\n• All payment records\n• All work history\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?",
+                // Unpaid alert translations
+                unpaid_critical: "CRITICAL UNPAID AMOUNT",
+                unpaid_high: "HIGH UNPAID AMOUNT",
+                unpaid_pending: "PENDING PAYMENTS",
+                unpaid_text: "You have unpaid work worth:",
+                unpaid_submissions: "submission",
+                unpaid_submissions_plural: "submissions",
+                unpaid_waiting: "waiting for payment"
             },
             ar: {
                 app_title: "مؤقت عمل الحفارة 🚜",
@@ -1848,7 +1856,15 @@
                 clear_unsent_sessions: "مسح الجلسات غير المرسلة",
                 clear_submission_history: "مسح سجل الإرساليات",
                 confirm_clear_unsent: "حذف جميع جلسات العمل غير المرسلة؟ لا يمكن التراجع عن هذا الإجراء!",
-                confirm_clear_submissions: "⚠️ تحذير: حذف كل سجل الإرساليات؟\n\nسيتم حذف نهائيًا:\n• جميع الجلسات المرسلة\n• جميع سجلات الدفع\n• جميع سجلات العمل\n\nلا يمكن التراجع عن هذا الإجراء!\n\nهل أنت متأكد تمامًا؟"
+                confirm_clear_submissions: "⚠️ تحذير: حذف كل سجل الإرساليات؟\n\nسيتم حذف نهائيًا:\n• جميع الجلسات المرسلة\n• جميع سجلات الدفع\n• جميع سجلات العمل\n\nلا يمكن التراجع عن هذا الإجراء!\n\nهل أنت متأكد تمامًا؟",
+                // Unpaid alert translations
+                unpaid_critical: "مبلغ حرج غير مدفوع",
+                unpaid_high: "مبلغ كبير غير مدفوع",
+                unpaid_pending: "مدفوعات قيد الانتظار",
+                unpaid_text: "لديك عمل غير مدفوع بقيمة:",
+                unpaid_submissions: "إرسالية",
+                unpaid_submissions_plural: "إرساليات",
+                unpaid_waiting: "في انتظار الدفع"
             }
         };
 
@@ -2755,12 +2771,12 @@
             }
             
             // Determine alert level and styling
-            let icon, title, bgColor, textColor, borderColor, animation;
+            let icon, titleKey, bgColor, textColor, borderColor, animation;
             
             if (totalUnpaid > 10000) {
                 // 🔴 CRITICAL (Over 10,000 MAD)
                 icon = '🚨';
-                title = 'CRITICAL UNPAID AMOUNT';
+                titleKey = 'unpaid_critical';
                 bgColor = '#fee2e2';
                 textColor = '#991b1b';
                 borderColor = '#dc2626';
@@ -2768,7 +2784,7 @@
             } else if (totalUnpaid > 6000) {
                 // 🟠 HIGH (6,000 - 10,000 MAD)
                 icon = '⚠️';
-                title = 'HIGH UNPAID AMOUNT';
+                titleKey = 'unpaid_high';
                 bgColor = '#fed7aa';
                 textColor = '#9a3412';
                 borderColor = '#ea580c';
@@ -2776,7 +2792,7 @@
             } else if (totalUnpaid > 2000) {
                 // 🟡 MEDIUM (2,000 - 6,000 MAD)
                 icon = '⚠️';
-                title = 'PENDING PAYMENTS';
+                titleKey = 'unpaid_pending';
                 bgColor = '#fef3c7';
                 textColor = '#92400e';
                 borderColor = '#f59e0b';
@@ -2784,12 +2800,18 @@
             } else {
                 // 🟢 LOW (Under 2,000 MAD)
                 icon = 'ℹ️';
-                title = 'PENDING PAYMENTS';
+                titleKey = 'unpaid_pending';
                 bgColor = '#dbeafe';
                 textColor = '#1e40af';
                 borderColor = '#3b82f6';
                 animation = 'none';
             }
+            
+            // Get translated strings
+            const title = t(titleKey);
+            const unpaidText = t('unpaid_text');
+            const submissionText = submissionCount > 1 ? t('unpaid_submissions_plural') : t('unpaid_submissions');
+            const waitingText = t('unpaid_waiting');
             
             // Render alert
             alertContainer.innerHTML = `
@@ -2805,13 +2827,13 @@
                         ${icon} ${title}
                     </div>
                     <div style="font-size: 14px; color: ${textColor}; margin-bottom: 15px;">
-                        You have unpaid work worth:
+                        ${unpaidText}
                     </div>
                     <div style="font-size: 32px; font-weight: 800; color: ${textColor}; margin-bottom: 15px;">
                         💰 ${totalUnpaid.toFixed(2)} MAD
                     </div>
                     <div style="font-size: 14px; color: ${textColor};">
-                        ${submissionCount} submission${submissionCount > 1 ? 's' : ''} waiting for payment
+                        ${submissionCount} ${submissionText} ${waitingText}
                     </div>
                 </div>
             `;
